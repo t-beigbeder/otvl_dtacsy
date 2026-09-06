@@ -23,6 +23,6 @@ func TestOplWalker(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, oplm.Create(std, ttd))
 
-	ow := NewOplWalker(lgr, 4, nil, oplm, localfiles.MakeLocalFilesDssa(), localfiles.MakeLocalFilesDssa())
+	ow := NewOplWalker(lgr, 4, nil, oplm, localfiles.MakeLocalFilesDssa(), localfiles.MakeLocalFilesDssa(), std, ttd)
 	require.NoError(t, ow.Run())
 }

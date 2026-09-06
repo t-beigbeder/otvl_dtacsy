@@ -17,7 +17,7 @@ func TestRP(t *testing.T) {
 	require.Equal(t, rfn, "d1/f1")
 	td2 := path.Join(td, "")
 	require.Equal(t, td, td2)
-	require.Empty(t, RelPath(td2, td))
+	require.Equal(t, "", RelPath(td2, td))
 	require.Equal(t, "path1", RelPath("/path/to/path1", "/path/to"))
 	require.Equal(t, "path2", RelPath("/path2", "/"))
 }

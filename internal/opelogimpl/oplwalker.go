@@ -22,6 +22,8 @@ type oplWalkerImpl struct {
 	oplm  opelog.OpeLogManager
 	sds   dssa.Dssa
 	tds   dssa.Dssa
+	sRoot string
+	tRoot string
 	gErrs []error
 }
 
@@ -79,7 +81,7 @@ func (ow *oplWalkerImpl) Run() error {
 	return nil
 }
 
-func NewOplWalker(lgr *slog.Logger, conc int, oplq opelog.Queue, oplm opelog.OpeLogManager, sds, tds dssa.Dssa) OplWalker {
+func NewOplWalker(lgr *slog.Logger, conc int, oplq opelog.Queue, oplm opelog.OpeLogManager, sds, tds dssa.Dssa, sRoot, tRoot string) OplWalker {
 	if conc == 0 {
 		conc = 1
 	}
@@ -89,6 +91,6 @@ func NewOplWalker(lgr *slog.Logger, conc int, oplq opelog.Queue, oplm opelog.Ope
 	return &oplWalkerImpl{
 		lgr:  lgr,
 		conc: conc, oplq: oplq, oplm: oplm,
-		sds: sds, tds: tds,
+		sds: sds, tds: tds, sRoot: sRoot, tRoot: tRoot,
 	}
 }

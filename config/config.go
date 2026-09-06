@@ -46,6 +46,12 @@ type SyncOptionsType struct {
 	InclListPath string `yaml:"inclListPath"`
 }
 
+type OpeLogOptionsType struct {
+	SyncOptionsType `yaml:"syncOptionsType"`
+	Goals           string `yaml:"goals"`
+	StatsTime       int64  `yaml:"statsTime"`
+}
+
 type SftpServerType struct {
 	Name           string `yaml:"name"`
 	User           string `yaml:"user"`
