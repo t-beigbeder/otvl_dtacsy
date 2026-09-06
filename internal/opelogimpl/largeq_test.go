@@ -13,7 +13,7 @@ import (
 func TestLargeqSimple(t *testing.T) {
 	// t.Skip("won't work")
 	const conc = 4
-	lgr := common.DbgLogger()
+	lgr := common.GetLogger()
 	td := t.TempDir()
 	lq, err := NewLargeQ(lgr, td, 10000)
 	require.NoError(t, err)

@@ -15,13 +15,13 @@ type OplWalker interface {
 }
 
 type oplWalkerImpl struct {
-	mx sync.Mutex
-	lgr  *slog.Logger
-	conc int
-	oplq opelog.Queue
-	oplm opelog.OpeLogManager
-	sds  dssa.Dssa
-	tds  dssa.Dssa
+	mx    sync.Mutex
+	lgr   *slog.Logger
+	conc  int
+	oplq  opelog.Queue
+	oplm  opelog.OpeLogManager
+	sds   dssa.Dssa
+	tds   dssa.Dssa
 	gErrs []error
 }
 
@@ -85,7 +85,7 @@ func NewOplWalker(lgr *slog.Logger, conc int, oplq opelog.Queue, oplm opelog.Ope
 		oplq = NewMemQueue(conc)
 	}
 	return &oplWalkerImpl{
-		lgr: lgr,
+		lgr:  lgr,
 		conc: conc, oplq: oplq, oplm: oplm,
 		sds: sds, tds: tds,
 	}

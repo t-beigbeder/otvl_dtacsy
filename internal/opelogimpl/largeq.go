@@ -39,7 +39,7 @@ func (lq *largeQ) saveEntries() error {
 }
 
 func (lq *largeQ) prodEvent() {
-	if lq.cOff+1 == lq.pOff {
+	if lq.cOff == lq.pOff {
 		for _, prodSub := range lq.prodSubs {
 			close(prodSub)
 		}
@@ -118,6 +118,7 @@ func (lq *largeQ) Put(s string) error {
 	if lq.closed {
 		return errors.New("largeQ.Put: write on closed queue")
 	}
+	lq.prodEvent()
 	lq.pEntries.PushBack(s)
 	lq.pOff++
 	if lq.pEntries.Len() == lq.segSize {
@@ -125,7 +126,6 @@ func (lq *largeQ) Put(s string) error {
 			return err
 		}
 	}
-	lq.prodEvent()
 	return nil
 }
 

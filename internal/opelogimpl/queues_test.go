@@ -167,7 +167,6 @@ func TestQueuesSimple(t *testing.T) {
 		},
 		{
 			label:   "largeq prod then cons 4",
-			lgr: dbgLog,
 			conc:    4,
 			qType:   "LargeQueue",
 			segSize: 10000,

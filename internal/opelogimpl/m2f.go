@@ -86,7 +86,7 @@ func (m *m2fMng) Close() error {
 	m.hasUpdates = false
 	m.isOpen = false
 	if !m.readOnly {
-		if err :=  os.Remove(fmt.Sprintf("%s.lock", m.path));err != nil {
+		if err := os.Remove(fmt.Sprintf("%s.lock", m.path)); err != nil {
 			return err
 		}
 	}
