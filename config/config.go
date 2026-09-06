@@ -6,7 +6,7 @@ import (
 
 type PluginsOptionsType struct {
 	NoTls          bool   `yaml:"noTls"`
-	Insecure       bool   `yaml`
+	Insecure       bool   `yaml:"insecure"`
 	CertPath       string `yaml:"certPath"`
 	KeyPath        string `yaml:"keyPath"`
 	CaCertPath     string `yaml:"caCertPath"`
@@ -15,51 +15,51 @@ type PluginsOptionsType struct {
 }
 
 type PluginType struct {
-	Name           string   `yaml`
-	Type           string   `yaml`
+	Name           string   `yaml:"name"`
+	Type           string   `yaml:"type"`
 	ExecutablePath string   `yaml:"executablePath"`
 	AddArgs        []string `yaml:"addArgs"`
-	Port           int      `yaml`
+	Port           int      `yaml:"port"`
 }
 
 type VdaServerType struct {
-	Host           string `yaml`
-	Port           int    `yaml`
-	Insecure       bool   `yaml`
-	NoTls          bool   `yaml`
+	Host           string `yaml:"host"`
+	Port           int    `yaml:"port"`
+	Insecure       bool   `yaml:"insecure"`
+	NoTls          bool   `yaml:"noTls"`
 	CaCertPath     string `yaml:"caCertPath"`
 	ClientCertPath string `yaml:"clientCertPath"`
 	ClientKeyPath  string `yaml:"clientKeyPath"`
 }
 
 type SyncOptionsType struct {
-	Dryrun       bool   `yaml`
-	Check        bool   `yaml`
+	Dryrun       bool   `yaml:"dryrun"`
+	Check        bool   `yaml:"check"`
 	CsAlgos      string `yaml:"csAlgos"`
 	NoPerm       bool   `yaml:"noPerm"`
 	NoMtime      bool   `yaml:"noMtime"`
 	NoMtLink     bool   `yaml:"noMtLink"`
-	Rm           bool   `yaml`
-	Force        bool   `yaml`
+	Rm           bool   `yaml:"rm"`
+	Force        bool   `yaml:"force"`
 	IgnoreIrreg  bool   `yaml:"ignoreIrreg"`
 	ExclListPath string `yaml:"exclListPath"`
 	InclListPath string `yaml:"inclListPath"`
 }
 
 type SftpServerType struct {
-	Name           string `yaml`
-	User           string `yaml`
-	Address        string `yaml`
-	Identity       string `yaml`
-	Root           string `yaml`
-	Concurrency    int    `yaml`
+	Name           string `yaml:"name"`
+	User           string `yaml:"user"`
+	Address        string `yaml:"address"`
+	Identity       string `yaml:"identity"`
+	Root           string `yaml:"root"`
+	Concurrency    int    `yaml:"concurrency"`
 	KnownHostsFile string `yaml:"knownHostsFile"`
 }
 
 type CliConfig struct {
-	Version            string              `yaml`
+	Version            string              `yaml:"version"`
 	PluginsOptions     *PluginsOptionsType `yaml:"pluginsOptions"`
-	Plugins            []*PluginType       `yaml`
+	Plugins            []*PluginType       `yaml:"plugins"`
 	PluginReadyRetries int                 `yaml:"pluginReadyRetries"`
 	PluginReadyTimeout string              `yaml:"pluginReadyTimeout"`
 	PluginAddress      string              `yaml:"pluginAddress"`
