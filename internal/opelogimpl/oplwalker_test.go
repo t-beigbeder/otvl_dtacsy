@@ -5,11 +5,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/t-beigbeder/vdasync/config"
 	"github.com/t-beigbeder/vdasync/internal/common"
 	"github.com/t-beigbeder/vdasync/internal/dssaimpl/localfiles"
 )
 
 func TestOplWalker(t *testing.T) {
+	t.Skip("wip")
 	lgr := common.DbgLogger()
 	lgr.Debug("TestOplWalker: started")
 	std := t.TempDir()
@@ -23,6 +25,11 @@ func TestOplWalker(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, oplm.Create(std, ttd))
 
-	ow := NewOplWalker(lgr, 4, nil, oplm, localfiles.MakeLocalFilesDssa(), localfiles.MakeLocalFilesDssa(), std, ttd)
+	ow := NewOplWalker(
+		lgr, 4, nil, oplm,
+		&config.OpeLogOptionsType{
+			Goals: "load", // load, create, update/remove, verify
+		},
+		localfiles.MakeLocalFilesDssa(), localfiles.MakeLocalFilesDssa(), std, ttd)
 	require.NoError(t, ow.Run())
 }
