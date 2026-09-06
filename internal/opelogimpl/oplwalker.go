@@ -45,7 +45,9 @@ func (ow *oplWalkerImpl) work(wkn int, wg *sync.WaitGroup) {
 			break
 		}
 		ow.lgr.Debug("work", "worker", wkn, "received rp", rp)
-		ow.oplq.Close()
+		if err := ow.oplq.Close(); err != nil {
+			ow.owErr("oplWalkerImpl.work: close queue", err)
+		}
 	}
 	ow.lgr.Info("oplWalkerImpl.work: stop", "worker", wkn)
 }

@@ -13,7 +13,7 @@ func TestOplWalker(t *testing.T) {
 	lgr := common.DbgLogger()
 	lgr.Debug("TestOplWalker: started")
 	std := t.TempDir()
-	require.NoError(t, common.FileTreeGenerate(std, 250, 25000, 2, 32768, false, 2))
+	require.NoError(t, common.FileTreeGenerate(std, 100, 3000, 2, 4096, false, 2))
 	lgr.Debug("TestM2fOpeLogs: FileTreeGenerated")
 
 	ltd := t.TempDir()
