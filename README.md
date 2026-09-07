@@ -91,6 +91,7 @@ Vdasync commands and their arguments are detailed here:
 - [vdasync](docs/vdasync.md)
 - [vdaserver](docs/vdaserver.md)
 - [vdaservice](docs/vdaservice.md)
+- [operations logs](docs/opelog.md)
 
 Vdasync plugins are detailed here:
 
