@@ -113,8 +113,8 @@ This is notified as an error by the API, and in the case of the synchronization 
 may be ignored using explicit exclusion lists or implicitly with the `-iirreg` flag.
 - In the same vein, Linux extended attributes, ACLs, and esoteric OSes file access attributes are not managed.
 This could be the responsibility of various plugins to be developed.
-The dssa.DataEntry structure provides a UserMeta attribute to marshal/unmarshal any technical metadata
-that could be useful for this purpose.
+The dssa.DataEntry structure provides an attribute named AddMeta to marshal/unmarshal any technical metadata
+that could be useful for this purpose in addition to POSIX standard one.
 - While a DSS implementation can provide some horizontal scalability through distributed processing or storage,
 this is (currently) not the case for the synchronization engine itself.
 Even if the memory used by the `vdasync` process remains moderated on very large datasets
