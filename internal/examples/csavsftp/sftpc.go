@@ -183,7 +183,7 @@ func (sf *sftpClient) Symlink(old string, new_ string) error {
 
 type SftpClientFactory func(user, address, identity, knownHostsFile string) (*sftp.Client, error)
 
-func MakeSftpClientDssa(
+func MakeCsAvSftpClientDssa(
 	user, address, identity, root string, concurrency int,
 	factory SftpClientFactory, knownHostsFile string) (dssa.Dssa, error) {
 	sfcs := make(chan *sftp.Client, concurrency+1)
@@ -231,12 +231,12 @@ func (dmk *DssaMaker) MakeDssa(args ...any) (dssa.Dssa, error) {
 	if knownHostsFile, ok = args[5].(string); !ok {
 		return nil, errors.New("csavsftp.MakeDssa: knownHostsFile incorrect type")
 	}
-	return MakeSftpClientDssa(user, address, identity, root, concurrency, GetSftpClient, knownHostsFile)
+	return MakeCsAvSftpClientDssa(user, address, identity, root, concurrency, GetCsAvSftpClient, knownHostsFile)
 }
 
 var _ dssa.DssaMaker = &DssaMaker{}
 
-func GetSftpClient(user, address, identity, knownHostsFile string) (*sftp.Client, error) {
+func GetCsAvSftpClient(user, address, identity, knownHostsFile string) (*sftp.Client, error) {
 	if identity == "" {
 		return nil, errors.New("GetSftpClient: missing identity file")
 	}

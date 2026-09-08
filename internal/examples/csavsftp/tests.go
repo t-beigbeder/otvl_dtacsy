@@ -51,7 +51,7 @@ func GetSftpEnv() (user, address, identity, root string) {
 	return
 }
 
-func GetTestSftpClient(user, address, identity, _ string) (*sftp.Client, error) {
+func GetTestCsAvSftpClient(user, address, identity, _ string) (*sftp.Client, error) {
 	key, err := os.ReadFile("/local/tmp/id_ssh_test")
 	if err != nil {
 		return nil, err
@@ -104,7 +104,7 @@ func GetTestSftpClient(user, address, identity, _ string) (*sftp.Client, error) 
 
 func GetSftpDss(t *testing.T) dssa.Dssa {
 	user, address, identity, root := GetSftpEnv()
-	dss, err := MakeSftpClientDssa(user, address, identity, root, 4, GetTestSftpClient, "")
+	dss, err := MakeCsAvSftpClientDssa(user, address, identity, root, 4, GetTestCsAvSftpClient, "")
 	require.NoError(t, err)
 	return dss
 }
