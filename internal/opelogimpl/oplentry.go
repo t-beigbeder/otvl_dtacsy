@@ -5,11 +5,14 @@ import (
 	"log/slog"
 	"path"
 	"strings"
+	"time"
 
+	"github.com/t-beigbeder/vdasync/dssa"
 	"github.com/t-beigbeder/vdasync/opelog"
 )
 
 type oplLogicalEntry struct {
+	isDir   bool
 	relPath string
 	plgr    *slog.Logger
 	owi     *oplWalkerImpl
@@ -20,9 +23,22 @@ func (ole *oplLogicalEntry) lgr() *slog.Logger {
 	return ole.plgr.With("relPath", ole.relPath)
 }
 
+func (ole *oplLogicalEntry) source() *oplStoredEntry {
+	return &oplStoredEntry{oplLogicalEntry: ole}
+}
+
+func (ole *oplLogicalEntry) target() *oplStoredEntry {
+	return &oplStoredEntry{oplLogicalEntry: ole, isTarget: true}
+}
+
 func (ole *oplLogicalEntry) load() error {
 	ole.lgr().Debug("load: start")
-
+	if err := ole.source().load(); err != nil {
+		return err
+	}
+	if err := ole.target().load(); err != nil {
+		return err
+	}
 	ole.lgr().Debug("load: stop")
 	return errors.ErrUnsupported
 }
@@ -51,7 +67,7 @@ func (ole *oplLogicalEntry) process() error {
 }
 
 type oplStoredEntry struct {
-	oplLogicalEntry
+	*oplLogicalEntry
 	isTarget bool
 }
 
@@ -64,7 +80,7 @@ func (ose *oplStoredEntry) pfx() string {
 }
 
 func (ose *oplStoredEntry) lgr() *slog.Logger {
-	return ose.plgr.With("path", ose.pfx()+ose.relPath)
+	return ose.plgr.With("path", path.Join(ose.pfx(), ose.relPath))
 }
 
 func (ose *oplStoredEntry) root() string {
@@ -77,4 +93,71 @@ func (ose *oplStoredEntry) root() string {
 
 func (ose *oplStoredEntry) fullPath() string {
 	return path.Join(ose.root(), ose.relPath)
+}
+
+func (ose *oplStoredEntry) events() (evs []*opelog.Event) {
+	if ose.isTarget {
+		evs = ose.le.TargetEvents
+	} else {
+		evs = ose.le.SourceEvents
+	}
+	return
+}
+
+func (ose *oplStoredEntry) existenceEv() (ev *opelog.Event) {
+	evs := ose.events()
+	for i := len(evs) - 1; i >= 0; i-- {
+		if evs[i].Kind == opelog.EVT_ABS || evs[i].Kind == opelog.EVT_EXIST {
+			return evs[i]
+		}
+	}
+	return nil
+}
+
+func (ose *oplStoredEntry) states() (sts []*opelog.StoredEntry) {
+	if ose.isTarget {
+		sts = ose.le.TargetStates
+	} else {
+		sts = ose.le.SourceStates
+	}
+	return
+}
+
+func (ose *oplStoredEntry) currentState() *opelog.StoredEntry {
+	sts := ose.states()
+	if len(sts) == 0 {
+		return nil
+	}
+	return sts[len(sts)-1]
+}
+
+func (ose *oplStoredEntry) dss() (ds dssa.Dssa) {
+	if ose.isTarget {
+		ds = ose.owi.tds
+	} else {
+		ds = ose.owi.sds
+	}
+	return
+}
+
+func (ose *oplStoredEntry) newEvent(kind opelog.EventCode, origin opelog.OriginCode, sErr string) {
+	evs := ose.events()
+	evs = append(evs, &opelog.Event{Kind: kind, Origin: origin, TimeStamp: time.Now().Unix(), StateIndex: int32(len(ose.states()) - 1), Error: sErr})
+}
+
+func (ose *oplStoredEntry) load() error {
+	eev := ose.existenceEv()
+	if eev != nil && eev.Error == "" {
+		return nil
+	}
+	ose.lgr().Debug("load: start")
+	de, err := ose.dss().Stat(ose.fullPath())
+	if err != nil && !de.ErrNotExist {
+		sts := ose.states()
+		sts = append(sts, &opelog.StoredEntry{})
+		ose.newEvent(opelog.EVT_ABS, opelog.ORI_STAT, err.Error())
+		return err
+	}
+	ose.lgr().Debug("load: stop")
+	return nil
 }

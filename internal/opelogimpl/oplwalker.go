@@ -52,24 +52,32 @@ func (ow *oplWalkerImpl) work(wkn int, wg *sync.WaitGroup) {
 	lgr := ow.lgr.With("worker", wkn)
 	lgr.Debug("oplWalkerImpl.work: start", "worker", wkn)
 	for {
-		relPath, err := ow.oplq.Get()
+		relPathWithSlash, err := ow.oplq.Get()
 		if err != nil {
 			if err != common.ErrReadClosedQueue {
 				ow.owErr(lgr, "oplWalkerImpl.work", err)
 			}
 			break
 		}
-		ow.lgr.Debug("oplWalkerImpl.work", "worker", wkn, "received relPath", relPath)
-		le, err := ow.oplm.GetLogicalEntry(relPath)
+		ow.lgr.Debug("oplWalkerImpl.work", "worker", wkn, "received relPathWithSlash", relPathWithSlash)
+		le, err := ow.oplm.GetLogicalEntry(relPathWithSlash)
 		if err != nil {
 			ow.owErr(lgr, "oplWalkerImpl.work: GetLogicalEntry", err)
+			continue
 		}
-		ole := &oplLogicalEntry{plgr: lgr, relPath: relPath, owi: ow, le: le}
+		// FIXME: le may be nil
+		isDir := false
+		relPath := relPathWithSlash
+		if relPathWithSlash == "" || string(relPathWithSlash[len(relPathWithSlash)-1]) == "/" {
+			isDir = true
+			if relPath != "" {
+				relPath = relPathWithSlash[:len(relPathWithSlash)-1]
+			}
+		}
+		ole := &oplLogicalEntry{plgr: lgr, isDir: isDir, relPath: relPath, owi: ow, le: le}
 		if err := ole.process(); err != nil {
 			ow.owErr(lgr, "oplWalkerImpl.work: process entry", err)
-		}
-		if err := ow.oplq.Close(); err != nil {
-			ow.owErr(lgr, "oplWalkerImpl.work: close queue", err)
+			continue
 		}
 	}
 	ow.lgr.Debug("oplWalkerImpl.work: stop", "worker", wkn)

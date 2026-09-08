@@ -63,7 +63,7 @@ func RunSftpPlugin() {
 	}
 	dss, err := csavsftp.MakeCsAvSftpClientDssa(*sftpUser, *sftpAddress, *sftpIdent, *sftpRoot, *cf.ConcurrencyFlag, csavsftp.GetCsAvSftpClient, knownHostsFile)
 	if err != nil {
-		common.Fatal(lgr, fmt.Errorf("sftpc.MakeSftpClientDssa: %s: %v", exe, err))
+		common.Fatal(lgr, fmt.Errorf("csavsftp.MakeSftpClientDssa: %s: %v", exe, err))
 	}
 
 	sop, err := cli.GetServerOrPluginTls(cf)
