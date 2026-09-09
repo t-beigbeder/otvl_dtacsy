@@ -50,6 +50,7 @@ xbuild:
 	go build -o $(BDIR)/vdasftp$(BEXT) -ldflags "-X github.com/t-beigbeder/vdasync/config.Version=$(VERSION)" cmd/plugins/sftp/main.go
 	go build -o $(BDIR)/localFiles$(BEXT) -ldflags "-X github.com/t-beigbeder/vdasync/config.Version=$(VERSION)" cmd/plugins/localfiles/main.go
 	go build -o $(BDIR)/vdasftpsync$(BEXT) -ldflags "-X github.com/t-beigbeder/vdasync/config.Version=$(VERSION)" cmd/vdasftpsync/main.go
+	go build -o $(BDIR)/csavsftp$(BEXT) -ldflags "-X github.com/t-beigbeder/vdasync/config.Version=$(VERSION)" cmd/plugins/examples/csavsftp/main.go
 
 .PHONY: build
 build: export GOOS = linux

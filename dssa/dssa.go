@@ -24,6 +24,7 @@ type DataEntry struct {
 	Error         error
 	ErrNotExist   bool
 	Id            string
+	AddMeta       []byte
 }
 
 type Dssa interface {

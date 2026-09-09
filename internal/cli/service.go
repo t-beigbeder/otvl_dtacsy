@@ -176,6 +176,7 @@ type ServiceCtx struct {
 	TrustRecs   []string
 	Latency     string
 	Count       int
+	Size        int
 	Concurrency int
 	Lgr         *slog.Logger
 	OutFile     io.Writer
@@ -193,6 +194,8 @@ func DoService(sc *ServiceCtx) error {
 		return doUnTrust(sc)
 	case "latency":
 		return doLatency(sc)
+	case "ftgen":
+		return doFtGen(sc)
 	case "version":
 		return doVersion(sc)
 	case "shutdown":
@@ -391,6 +394,10 @@ func doLatency(sc *ServiceCtx) error {
 	}
 	wg.Wait()
 	return nil
+}
+
+func doFtGen(sc *ServiceCtx) error {
+	return common.FileTreeGenerate(sc.Root, sc.Count/1000, sc.Count, 3, sc.Size, false, sc.Concurrency)
 }
 
 func doVersion(sc *ServiceCtx) error {

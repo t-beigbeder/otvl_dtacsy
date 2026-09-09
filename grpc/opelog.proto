@@ -4,11 +4,6 @@ package opelog;
 
 option go_package = "./opeloggrpc";
 
-message LogEntry {
-    string rel_path = 1;
-    repeated OpeLogEntry ope_log_entries = 2;
-}
-
 message Rights {
     bool read = 1;
     bool write = 2;
@@ -16,47 +11,92 @@ message Rights {
 }
 
 message StoredEntry {
-    bool is_dir = 1;
-    int64 size = 2;
-    int64 mtime = 3;
-    int32 user = 4;
-    Rights user_rights = 5;
-    int32 group = 6;
-    Rights group_rights = 7;
-    Rights other_rights = 8;
-    bool is_sym_link = 9;
-    string sym_link_target = 10;
-    repeated string children = 11;
+    bool is_present = 1;
+    bool is_dir = 2;
+    int64 size = 3;
+    int64 mtime = 4;
+    int32 user = 5;
+    Rights user_rights = 6;
+    int32 group = 7;
+    Rights group_rights = 8;
+    Rights other_rights = 9;
+    bool is_sym_link = 10;
+    string sym_link_target = 11;
+    repeated string children = 12;
 }
 
-enum OpeCode {
-   OPE_CODE_UNSPECIFIED = 0;
-   OPE_CODE_SOURCE_STAT = 1;
-   OPE_CODE_TARGET_STAT = 2;
-   OPE_CODE_SOURCE_CHECKSUM = 3;
-   OPE_CODE_TARGET_CHECKSUM = 4;
-   OPE_CODE_MKDIR = 5;
-   OPE_CODE_COPY = 6;
-   OPE_CODE_SYMLINK = 7;
-   OPE_CODE_DELETE = 8;
-   OPE_CODE_SET_STAT = 9;
+enum EventCode {
+   EVT_UNSPECIFIED = 0;
+   EVT_ABS = 1;
+   EVT_EXIST = 2;
+   EVT_CR_MOD = 3;
+   EVT_ATTS_CHG = 4;
+   EVT_START_DIRUP = 5;
+   EVT_END_DIRUP = 6;
 }
 
-message OpeLogEntry {
-    OpeCode code = 1;
-    bool check = 2;
+enum OriginCode {
+   ORI_UNSPECIFIED = 0;
+   ORI_LIST = 1;
+   ORI_STAT = 2;
+   ORI_READ = 3;
+   ORI_MKDIR = 4;
+   ORI_WRITE = 5;
+   ORI_SET_STAT = 6;
+   ORI_RM = 7;
+}
+
+message Event {
+    EventCode kind = 1;
+    OriginCode origin = 2;
     int64 time_stamp = 3;
-    uint64 error_id = 4;
-    StoredEntry source = 5;
-    StoredEntry target = 6;
+    int32 state_index = 4;
     // comma-separated list algo:hexa-of-checksum
-    string source_checksums = 7;
-    string target_checksums = 8;
+    string checksums = 5;
+    string error = 6;
+}
+
+message Verification {
+    int64 time_stamp = 1;
+    bool with_checksum = 2;
+    StoredEntry new_status = 3;
+    string new_checksums = 4;
+}
+
+message AggInfo {
+    int64 number = 1;
+    int64 size = 2;
+}
+
+message ComputedStats {
+    int64 time_stamp = 1;
+    AggInfo source_list_or_stat = 2;
+    AggInfo target_list_or_stat = 3;
+    AggInfo read = 4;
+    AggInfo create = 5;
+    AggInfo update = 6;
+    AggInfo remove = 7;
+    AggInfo mod_change = 8;
+    AggInfo error = 9;
+}
+
+message LogicalEntry {
+    // keeping source and target states out of event saves storage when unchanged
+    repeated StoredEntry source_states = 1;
+    repeated Event source_events = 2;
+    Verification source_verif = 3;
+    repeated StoredEntry target_states = 4;
+    StoredEntry dirup_state = 5;
+    repeated string dirup_children = 6;
+    repeated Event target_events = 7;
+    Verification target_verif = 8;
+    repeated ComputedStats stats_list = 9;
 }
 
 // For a memory to file simple implementation, limited to 2GiB, cf https://protobuf.dev/programming-guides/proto-limits/#total
 message OpeLogAllInOne {
-    string source = 1;
-    string target = 2;
-    repeated LogEntry log_entries = 3;
+    string source_root = 1;
+    string target_root = 2;
+    // the key is the relative path
+    map<string,LogicalEntry> logical_entries = 3;
 }

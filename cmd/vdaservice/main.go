@@ -15,7 +15,7 @@ import (
 
 func main() {
 	var (
-		cmdFlag          = flag.String("cmd", "", "a command to apply: list mkdir [un]trust latency version shutdown interactive")
+		cmdFlag          = flag.String("cmd", "", "a command to apply: list mkdir [un]trust latency version shutdown interactive ftgen")
 		dssFlag          = flag.String("dss", "", "dss on which the command applies")
 		recurFlag        = flag.Bool("recur", false, "apply recursively to sub-directories")
 		sortFlag         = flag.Bool("sort", false, "sort output with entries paths")
@@ -24,7 +24,8 @@ func main() {
 		statFlag         = flag.Bool("stat", false, "with list cmd, perform additional stat on each entry (simulate I/O)")
 		repairFlag       = flag.Bool("repair", false, "with trust cmd, request trusted server to repair metadata")
 		latencyFlag      = flag.String("latency", "100us", "latency")
-		countFlag        = flag.Int("count", 100000, "test count")
+		countFlag        = flag.Int("count", 100000, "test count, number of files")
+		sizeFlag         = flag.Int("size", 1024, "maximum file size")
 		ageEncIdfFlag    = flag.String("ageeidf", "", "DSS encryption age identities (secrets) file name")
 		ageEncRecfFlag   = flag.String("ageerecf", "", "DSS encryption age recipients (public keys) file name")
 		ageTrustRecfFlag = flag.String("agetrecf", "", "trusted server age recipients (public keys) file name")
@@ -124,6 +125,7 @@ func main() {
 		TrustRecs:   trustRecs,
 		Latency:     *latencyFlag,
 		Count:       *countFlag,
+		Size:        *sizeFlag,
 		Concurrency: *cf.ConcurrencyFlag,
 		Lgr:         lgr,
 		OutFile:     outFile,

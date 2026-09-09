@@ -1,0 +1,125 @@
+package opelogimpl
+
+import (
+	"fmt"
+	"log/slog"
+	"strings"
+	"sync"
+
+	"github.com/t-beigbeder/vdasync/config"
+	"github.com/t-beigbeder/vdasync/dssa"
+	"github.com/t-beigbeder/vdasync/internal/common"
+	"github.com/t-beigbeder/vdasync/opelog"
+)
+
+type OplWalker interface {
+	Run() error
+}
+
+type oplWalkerImpl struct {
+	mx    sync.Mutex
+	lgr   *slog.Logger
+	conc  int
+	oplq  opelog.Queue
+	oplm  opelog.OpeLogManager
+	owo   *config.OpeLogOptionsType
+	sds   dssa.Dssa
+	tds   dssa.Dssa
+	sRoot string
+	tRoot string
+	gErrs []error
+}
+
+func (ow *oplWalkerImpl) owErr(lgr *slog.Logger, msg string, err error) error {
+	lgr.Error(msg, "err", err)
+	ow.mx.Lock()
+	defer ow.mx.Unlock()
+	ow.gErrs = append(ow.gErrs, fmt.Errorf("%s: %v", msg, err))
+	return err
+}
+
+func (ow *oplWalkerImpl) hasGoal(goal string) bool {
+	for _, owg := range strings.Split(ow.owo.Goals, ",") {
+		if owg == goal {
+			return true
+		}
+	}
+	return false
+}
+
+func (ow *oplWalkerImpl) work(wkn int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	lgr := ow.lgr.With("worker", wkn)
+	lgr.Debug("oplWalkerImpl.work: start", "worker", wkn)
+	for {
+		relPathWithSlash, err := ow.oplq.Get()
+		if err != nil {
+			if err != common.ErrReadClosedQueue {
+				ow.owErr(lgr, "oplWalkerImpl.work", err)
+			}
+			break
+		}
+		ow.lgr.Debug("oplWalkerImpl.work", "worker", wkn, "received relPathWithSlash", relPathWithSlash)
+		le, err := ow.oplm.GetLogicalEntry(relPathWithSlash)
+		if err != nil {
+			ow.owErr(lgr, "oplWalkerImpl.work: GetLogicalEntry", err)
+			continue
+		}
+		// FIXME: le may be nil
+		isDir := false
+		relPath := relPathWithSlash
+		if relPathWithSlash == "" || string(relPathWithSlash[len(relPathWithSlash)-1]) == "/" {
+			isDir = true
+			if relPath != "" {
+				relPath = relPathWithSlash[:len(relPathWithSlash)-1]
+			}
+		}
+		ole := &oplLogicalEntry{plgr: lgr, isDir: isDir, relPath: relPath, owi: ow, le: le}
+		if err := ole.process(); err != nil {
+			ow.owErr(lgr, "oplWalkerImpl.work: process entry", err)
+			continue
+		}
+	}
+	ow.lgr.Debug("oplWalkerImpl.work: stop", "worker", wkn)
+}
+
+func (ow *oplWalkerImpl) Run() error {
+	ow.lgr.Info("oplWalkerImpl.Run: start")
+	if err := ow.oplm.Open(false); err != nil {
+		ow.lgr.Error("oplWalkerImpl.Run: open logs", "err", err)
+		return err
+	}
+	var wg sync.WaitGroup
+	for wkn := range ow.conc {
+		wg.Add(1)
+		go ow.work(wkn, &wg)
+	}
+	ow.oplq.Put("")
+	wg.Wait()
+	if err := ow.oplm.Close(); err != nil {
+		ow.lgr.Error("oplWalkerImpl.Run: close logs", "err", err)
+		return err
+	}
+	ow.lgr.Info("oplWalkerImpl.Run: end")
+	if len(ow.gErrs) > 0 {
+		err := fmt.Errorf("walker %d errors occured", len(ow.gErrs))
+		ow.lgr.Error("oplWalkerImpl.Run:", "err", err)
+		ow.lgr.Debug("oplWalkerImpl.Run:", "err", err, "details", ow.gErrs)
+		return err
+	}
+	return nil
+}
+
+func NewOplWalker(lgr *slog.Logger, conc int, oplq opelog.Queue, oplm opelog.OpeLogManager, owo *config.OpeLogOptionsType, sds, tds dssa.Dssa, sRoot, tRoot string) OplWalker {
+	if conc == 0 {
+		conc = 1
+	}
+	if oplq == nil {
+		oplq = NewMemQueue(conc)
+	}
+	return &oplWalkerImpl{
+		lgr:  lgr,
+		conc: conc, oplq: oplq, oplm: oplm, owo: owo,
+		sds: sds, tds: tds, sRoot: sRoot, tRoot: tRoot,
+	}
+}

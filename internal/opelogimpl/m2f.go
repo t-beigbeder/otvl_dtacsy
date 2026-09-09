@@ -3,6 +3,7 @@ package opelogimpl
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/t-beigbeder/vdasync/internal/common"
@@ -16,64 +17,20 @@ type m2fMng struct {
 	mx         sync.Mutex
 	source     string
 	target     string
-	les        map[string]*opelog.LogEntry
-	hasSession bool
+	les        map[string]*opelog.LogicalEntry
+	readOnly   bool
+	isOpen     bool
 	hasUpdates bool
 }
 
-// GetEntryLog implements [opelog.OpeLogManager].
-func (m *m2fMng) GetEntryLog(relPath string) (*opelog.LogEntry, error) {
-	m.mx.Lock()
-	defer m.mx.Unlock()
-	if !m.hasSession {
-		return nil, errors.New("m2fMng.GetEntryLog: no session to get")
-	}
-	le, ok := m.les[relPath]
-	if !ok {
-		return nil, fmt.Errorf("m2fMng.GetEntryLog: %s: no such entry", relPath)
-	}
-	return le, nil
-}
-
-func MakeM2fManager(path, source, target string) (opelog.OpeLogManager, error) {
-	return &m2fMng{path: path, source: source, target: target}, nil
-}
-
-// EndSession implements [opelog.OpeLogManager].
-func (m *m2fMng) EndSession() error {
-	m.mx.Lock()
-	defer m.mx.Unlock()
-	if !m.hasSession {
-		return errors.New("m2fMng.EndSession: no session to end")
-	}
-	if !m.hasUpdates {
-		return nil
-	}
+func (m *m2fMng) save() error {
 	aio := opeloggrpc.OpeLogAllInOne{
-		Source:     m.source,
-		Target:     m.target,
-		LogEntries: make([]*opeloggrpc.LogEntry, len(m.les)),
+		SourceRoot:     m.source,
+		TargetRoot:     m.target,
+		LogicalEntries: make(map[string]*opeloggrpc.LogicalEntry, len(m.les)),
 	}
-	i := 0
-	for _, le := range m.les {
-		gles := &opeloggrpc.LogEntry{
-			RelPath:       le.RelPath,
-			OpeLogEntries: make([]*opeloggrpc.OpeLogEntry, len(le.OpeLogEntries)),
-		}
-		for j, ole := range le.OpeLogEntries {
-			gles.OpeLogEntries[j] = &opeloggrpc.OpeLogEntry{
-				Code:            opeloggrpc.OpeCode(ole.Code),
-				Check:           ole.Check,
-				TimeStamp:       ole.TimeStamp,
-				ErrorId:         ole.ErrorId,
-				Source:          opelog.StoredEntry2GrpcStoredEntry(ole.Source),
-				Target:          opelog.StoredEntry2GrpcStoredEntry(ole.Target),
-				SourceChecksums: ole.SourceChecksums,
-				TargetChecksums: ole.TargetChecksums,
-			}
-		}
-		aio.LogEntries[i] = gles
-		i++
+	for rp, le := range m.les {
+		aio.LogicalEntries[rp] = opelog.LogicalEntry2GrpcLogicalEntry(le)
 	}
 	bs, err := proto.Marshal(&aio)
 	if err != nil {
@@ -82,23 +39,73 @@ func (m *m2fMng) EndSession() error {
 	if err = common.WriteFile(m.path, bs); err != nil {
 		return err
 	}
+	return nil
+}
+
+// GetLogicalEntry implements [opelog.OpeLogManager].
+func (m *m2fMng) GetLogicalEntry(relPath string) (*opelog.LogicalEntry, error) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	if !m.isOpen {
+		return nil, errors.New("m2fMng.GetLogicalEntry: not opened")
+	}
+	le, _ := m.les[relPath]
+	return le, nil
+}
+
+// Sync implements [opelog.OpeLogManager].
+func (m *m2fMng) Sync() error {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	if !m.isOpen {
+		return errors.New("m2fMng.Sync: not opened")
+	}
+	if !m.hasUpdates {
+		return nil
+	}
+	if err := m.save(); err != nil {
+		return err
+	}
 	m.hasUpdates = false
 	return nil
 }
 
-// Init implements [opelog.OpeLogManager].
-func (m *m2fMng) Init(source string, target string) error {
+// Close implements [opelog.OpeLogManager].
+func (m *m2fMng) Close() error {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	if !m.isOpen {
+		return errors.New("m2fMng.Close: not opened")
+	}
+	if !m.hasUpdates {
+		return nil
+	}
+	if err := m.save(); err != nil {
+		return err
+	}
+	m.hasUpdates = false
+	m.isOpen = false
+	if !m.readOnly {
+		if err := os.Remove(fmt.Sprintf("%s.lock", m.path)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Create implements [opelog.OpeLogManager].
+func (m *m2fMng) Create(source string, target string) error {
 	m.mx.Lock()
 	defer m.mx.Unlock()
 	if common.FileExists(m.path) {
-		return fmt.Errorf("m2fMng.Init: %s already exists", m.path)
+		return fmt.Errorf("m2fMng.Create: %s already exists", m.path)
 	}
 	if m.les != nil {
-		return fmt.Errorf("m2fMng.Init: %s should be created without entries", m.path)
+		return fmt.Errorf("m2fMng.Create: %s should be created without entries", m.path)
 	}
 	aio := opeloggrpc.OpeLogAllInOne{
-		Source: m.source,
-		Target: m.target,
+		SourceRoot: m.source,
+		TargetRoot: m.target,
 	}
 	bs, err := proto.Marshal(&aio)
 	if err != nil {
@@ -111,11 +118,15 @@ func (m *m2fMng) Init(source string, target string) error {
 }
 
 // NewSession implements [opelog.OpeLogManager].
-func (m *m2fMng) NewSession() error {
+func (m *m2fMng) Open(readOnly bool) error {
 	m.mx.Lock()
 	defer m.mx.Unlock()
-	if m.hasSession {
-		return nil
+	lock := fmt.Sprintf("%s.lock", m.path)
+	if m.isOpen {
+		return errors.New("m2fMng.Open: already opened")
+	}
+	if !readOnly && common.FileExists(lock) {
+		return fmt.Errorf("m2fMng.Open: locked (%s)", lock)
 	}
 	bs, err := common.UnsafeLoadFile(m.path)
 	if err != nil {
@@ -125,47 +136,39 @@ func (m *m2fMng) NewSession() error {
 	if err = proto.Unmarshal(bs, &aio); err != nil {
 		return err
 	}
-	m.source = aio.Source
-	m.target = aio.Target
-	m.les = make(map[string]*opelog.LogEntry, len(aio.LogEntries))
-	for _, gle := range aio.LogEntries {
-		m.les[gle.RelPath] = &opelog.LogEntry{
-			RelPath:       gle.RelPath,
-			OpeLogEntries: make([]*opelog.OpeLogEntry, len(gle.OpeLogEntries)),
-		}
-		le := m.les[gle.RelPath]
-		for jx, gole := range gle.OpeLogEntries {
-			le.OpeLogEntries[jx] = &opelog.OpeLogEntry{
-				Code:            opelog.OpeCode(gole.Code),
-				Check:           gole.Check,
-				TimeStamp:       gole.TimeStamp,
-				ErrorId:         gole.ErrorId,
-				Source:          opelog.GrpcStoredEntry2StoredEntry(gole.Source),
-				Target:          opelog.GrpcStoredEntry2StoredEntry(gole.Target),
-				SourceChecksums: gole.SourceChecksums,
-				TargetChecksums: gole.TargetChecksums,
-			}
+	m.source = aio.SourceRoot
+	m.target = aio.TargetRoot
+	m.les = make(map[string]*opelog.LogicalEntry, len(aio.LogicalEntries))
+	for rp, gle := range aio.LogicalEntries {
+		m.les[rp] = opelog.GrpcLogicalEntry2LogicalEntry(gle)
+	}
+	if !readOnly {
+		if err := common.WriteFile(lock, []byte{}); err != nil {
+			return err
 		}
 	}
-	m.hasSession = true
+	m.isOpen = true
+	m.readOnly = readOnly
 	return nil
 }
 
-// PutEntryLog implements [opelog.OpeLogManager].
-func (m *m2fMng) PutEntryLog(relPath string, ole *opelog.OpeLogEntry) error {
+// PutLogicalEntry implements [opelog.OpeLogManager].
+func (m *m2fMng) PutLogicalEntry(relPath string, ole *opelog.LogicalEntry) error {
 	m.mx.Lock()
 	defer m.mx.Unlock()
-	if !m.hasSession {
-		return errors.New("m2fMng.PutEntryLog: no session to put")
+	if !m.isOpen {
+		return errors.New("m2fMng.PutEntryLog: not opened")
 	}
-	le, ok := m.les[relPath]
-	if !ok {
-		le = &opelog.LogEntry{RelPath: relPath, OpeLogEntries: []*opelog.OpeLogEntry{}}
-		m.les[relPath] = le
+	if m.readOnly {
+		return errors.New("m2fMng.PutEntryLog: opened in read-only")
 	}
-	le.OpeLogEntries = append(le.OpeLogEntries, ole)
+	m.les[relPath] = ole
 	m.hasUpdates = true
 	return nil
 }
 
 var _ opelog.OpeLogManager = &m2fMng{}
+
+func MakeM2fManager(path string) (opelog.OpeLogManager, error) {
+	return &m2fMng{path: path}, nil
+}

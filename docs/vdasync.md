@@ -2,6 +2,8 @@
 
 `vdasync` is the main CLI to synchronize target data from source data.
 
+See also [operations logs](opelog.md) for large and long running data transfers or traceability requirements.
+
 ## Usage
 
 Notes:

@@ -1,9 +1,12 @@
 package config
 
 import (
+	"path"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/stretchr/testify/require"
+	"github.com/t-beigbeder/vdasync/internal/common"
 )
 
 const CliConfigSample1Yaml string = `
@@ -69,4 +72,19 @@ func TestLoadConfig(t *testing.T) {
 	require.Equal(t, 1, len(config3.Plugins))
 	require.Equal(t, "default", config3.Plugins[0].Name)
 	require.Equal(t, DefaultPluginType, config3.Plugins[0].Type)
+}
+
+func Test2seeOplConfig(t *testing.T) {
+	oplc := &OpeLogOptionsType{
+		SyncOptionsType: SyncOptionsType{
+			Dryrun:  true,
+			Check:   true,
+			CsAlgos: "md5,sha256",
+		},
+		Goals: "one,two",
+	}
+	oply, err := yaml.Marshal(&oplc)
+	require.NoError(t, err)
+	td := t.TempDir()
+	common.WriteFile(path.Join(td, "sy.yaml"), oply)
 }

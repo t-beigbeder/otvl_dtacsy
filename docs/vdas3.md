@@ -3,6 +3,9 @@
 This plugin stores data and related metadata (directory contents, files attributes)
 as S3 object.
 
+
+![vdas3 plugin deployment](images/vdasync-s3.png "vdas3 plugin deployment schema")
+
 ## Usage
 
 Plugin is `vdas3` and its arguments can be found with `vdas3 -help`. Main arguments are:

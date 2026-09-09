@@ -30,11 +30,8 @@ It comes with the following components:
 
 The following additional components are also provided:
 
-  - [vdatserver](docs/vdatserver.md) is a gRPC server providing access
-  to remote encrypted files, an alternative to the `vdaencrypt` plugin remote storage
-  to encrypt the files on the server side for better efficiency and capabilities,
-  - [vdasftpsync](docs/vdasftpsync.md) integrates the `vdasftp` plugin inside `vdasync`
-  for simpler deployment
+  - [vdatserver](docs/vdatserver.md), is a gRPC server providing shared access to encrypted files
+  - [vdasftpsync](docs/vdasftpsync.md), a convenience utility that integrates the `vdasftp` plugin inside `vdasync`
   - [testcerts](docs/tls.md) a generator for testing certificates and their authorities
 
 ## Deployment overview
@@ -94,6 +91,7 @@ Vdasync commands and their arguments are detailed here:
 - [vdasync](docs/vdasync.md)
 - [vdaserver](docs/vdaserver.md)
 - [vdaservice](docs/vdaservice.md)
+- [operations logs](docs/opelog.md)
 
 Vdasync plugins are detailed here:
 
@@ -108,12 +106,22 @@ Vdasync technical details are following:
 - [TLS configuration](docs/tls.md)
 - [Development](docs/dev.md)
 
-## Limitation
+## Limitations
 
-The native or plugin-based DSS implementations are not able to handle special files
+- The native or plugin-based DSS implementations are not able to handle special files
 (sockets, pipes, devices...) other than symbolic links.
 This is notified as an error by the API, and in the case of the synchronization CLI
 may be ignored using explicit exclusion lists or implicitly with the `-iirreg` flag.
+- In the same vein, Linux extended attributes, ACLs, and esoteric OSes file access attributes are not managed.
+This could be the responsibility of various plugins to be developed.
+The dssa.DataEntry structure provides an attribute named AddMeta to marshal/unmarshal any technical metadata
+that could be useful for this purpose in addition to POSIX standard one.
+- While a DSS implementation can provide some horizontal scalability through distributed processing or storage,
+this is (currently) not the case for the synchronization engine itself.
+Even if the memory used by the `vdasync` process remains moderated on very large datasets
+through the use of operation logs,
+such a limitation could be a concern when DSS implementations provide high I/O rates that cannot be fully leveraged
+by the actual data copy performed by `vdasync` itself.
 
 ## Status
 
