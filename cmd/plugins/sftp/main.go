@@ -13,6 +13,7 @@ import (
 	"github.com/t-beigbeder/vdasync/internal/common"
 	"github.com/t-beigbeder/vdasync/internal/dssaimpl/sftpc"
 	"github.com/t-beigbeder/vdasync/internal/remote"
+	"github.com/t-beigbeder/vdasync/internal/sftps"
 	"google.golang.org/grpc"
 )
 
@@ -28,6 +29,7 @@ func RunSftpPlugin() {
 		sftpRoot    = flag.String("sftproot", "", "root path from SFTP server root where files are served")
 		sftpKHFile  = flag.String("sftpkhfile", "", "known_hosts file, defaults to $HOME/.ssh/known_hosts")
 		sftpNoHKC   = flag.Bool("sftpnohkc", false, "ignore host key, insecure, equivalent of ssh StrictHostKeychecking=no")
+		sftpServer  = flag.Bool("sftpserver", false, "convenient sftp server for testing")
 	)
 	cf := cli.CommonFlags()
 	flag.Parse()
@@ -39,6 +41,23 @@ func RunSftpPlugin() {
 	lgr, err := common.CliLogger(cmd, *cf.LogLevelFlag, *cf.LogFlag)
 	if err != nil {
 		common.Fatal(lgr, fmt.Errorf("path.Base: %s: %v", exe, err))
+	}
+	if *sftpServer {
+		if *sftpUser == "" {
+			common.Fatal(lgr, errors.New("sftuser empty"))
+		}
+		if *sftpIdent == "" {
+			common.Fatal(lgr, errors.New("sftpident empty"))
+		}
+		if *sftpRoot == "" {
+			common.Fatal(lgr, errors.New("sftproot empty"))
+		}
+		_, err := sftps.RunInsecureSftpServer(lgr, *sftpUser, *sftpAddress, *sftpIdent, *sftpRoot)
+		if err != nil {
+			common.Fatal(lgr, err)
+		}
+		lgr.Info("RunInsecureSftpServer: done")
+		os.Exit(0)
 	}
 
 	knownHostsFile := ""

@@ -26,6 +26,15 @@ test-cleansftp:	## go test clean sftp
 test-this:	## go test the application
 	go test -v -run TestMakeTestFilesTree github.com/t-beigbeder/vdasync/internal/common
 
+.PHONY: build-this
+build-this:	## go build only this
+build-this: export GOOS = linux
+build-this: export GOARCH = amd64
+build-this: export BDIR = bin/lamd64
+build-this: export BEXT =
+build-this:
+	go build -o $(BDIR)/vdasftp$(BEXT) -ldflags "-X github.com/t-beigbeder/vdasync/config.Version=$(VERSION)" cmd/plugins/sftp/main.go
+
 .PHONY: test-again
 test-again:	export OTVL_TEST_FULL = 1
 test-again: export GO_TEST_LOG_LEVEL = ERROR
