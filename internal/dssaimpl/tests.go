@@ -1,7 +1,6 @@
 package dssaimpl
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/t-beigbeder/vdasync/dssa"
