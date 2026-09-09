@@ -1,6 +1,7 @@
 package dssaimpl
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/t-beigbeder/vdasync/dssa"
@@ -31,6 +32,8 @@ func NewTestDss(tdo *TestDssOptions) (*TestDss, error) {
 	switch tdo.Kind {
 	case "lf":
 		testDss = &TestDss{dss: localfiles.MakeLocalFilesDssa()}
+	case "sftp":
+		err = errors.ErrUnsupported
 	default:
 		err = fmt.Errorf("kind for TestDssOptions %s unknown", tdo.Kind)
 	}
