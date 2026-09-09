@@ -1,12 +1,10 @@
 package sftpc
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
-	"net"
 	"os"
 	"path"
 	"time"
@@ -14,7 +12,7 @@ import (
 	"github.com/pkg/sftp"
 	"github.com/t-beigbeder/vdasync/dssa"
 	"github.com/t-beigbeder/vdasync/internal/common"
-	"golang.org/x/crypto/ssh"
+	"github.com/t-beigbeder/vdasync/internal/sftputil"
 )
 
 type sftpClient struct {
@@ -231,70 +229,7 @@ func (dmk *DssaMaker) MakeDssa(args ...any) (dssa.Dssa, error) {
 	if knownHostsFile, ok = args[5].(string); !ok {
 		return nil, errors.New("sftpc.MakeDssa: knownHostsFile incorrect type")
 	}
-	return MakeSftpClientDssa(user, address, identity, root, concurrency, GetSftpClient, knownHostsFile)
+	return MakeSftpClientDssa(user, address, identity, root, concurrency, sftputil.GetSftpClient, knownHostsFile)
 }
 
 var _ dssa.DssaMaker = &DssaMaker{}
-
-func GetSftpClient(user, address, identity, knownHostsFile string) (*sftp.Client, error) {
-	if identity == "" {
-		return nil, errors.New("GetSftpClient: missing identity file")
-	}
-	key, err := os.ReadFile(identity)
-	if err != nil {
-		return nil, err
-	}
-	signer, err := ssh.ParsePrivateKey(key)
-	if err != nil {
-		return nil, err
-	}
-	algorithms := ssh.SupportedAlgorithms()
-	var khss []string
-	if knownHostsFile != "" {
-		khlns, err := common.FileLines(knownHostsFile)
-		if err != nil {
-			return nil, err
-		}
-		for _, khln := range khlns {
-			_, _, pubKey, _, _, err := ssh.ParseKnownHosts([]byte(khln))
-			if err != nil {
-				return nil, err
-			}
-			khss = append(khss, pubKey.Type()+" "+base64.StdEncoding.EncodeToString(pubKey.Marshal()))
-		}
-	}
-
-	config := &ssh.ClientConfig{
-		Config: ssh.Config{
-			KeyExchanges: algorithms.KeyExchanges,
-			Ciphers:      algorithms.Ciphers,
-			MACs:         algorithms.MACs,
-		},
-		User: user,
-		Auth: []ssh.AuthMethod{
-			ssh.PublicKeys(signer),
-		},
-		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			if knownHostsFile == "" {
-				return nil
-			}
-			hks := key.Type() + " " + base64.StdEncoding.EncodeToString(key.Marshal())
-			for _, khs := range khss {
-				if hks == khs {
-					return nil
-				}
-			}
-			return fmt.Errorf("unkown host key %s for %s", hks, hostname)
-		},
-		HostKeyAlgorithms: algorithms.HostKeys,
-	}
-	sc, err := ssh.Dial("tcp", address, config)
-	if err != nil {
-		return nil, err
-	}
-	sfc, err := sftp.NewClient(sc)
-	if err != nil {
-		return nil, err
-	}
-	return sfc, nil
-}

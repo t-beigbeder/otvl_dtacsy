@@ -7,13 +7,14 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"time"
 
 	"github.com/t-beigbeder/vdasync/config"
 	"github.com/t-beigbeder/vdasync/internal/cli"
 	"github.com/t-beigbeder/vdasync/internal/common"
 	"github.com/t-beigbeder/vdasync/internal/dssaimpl/sftpc"
 	"github.com/t-beigbeder/vdasync/internal/remote"
-	"github.com/t-beigbeder/vdasync/internal/sftps"
+	"github.com/t-beigbeder/vdasync/internal/sftputil"
 	"google.golang.org/grpc"
 )
 
@@ -52,11 +53,12 @@ func RunSftpPlugin() {
 		if *sftpRoot == "" {
 			common.Fatal(lgr, errors.New("sftproot empty"))
 		}
-		_, err := sftps.RunInsecureSftpServer(lgr, *sftpUser, *sftpAddress, *sftpIdent, *sftpRoot)
+		_, err := sftputil.RunInsecureSftpServer(lgr, *sftpUser, *sftpAddress, *sftpIdent, *sftpRoot)
 		if err != nil {
 			common.Fatal(lgr, err)
 		}
-		lgr.Info("RunInsecureSftpServer: done")
+		lgr.Info("RunInsecureSftpServer: will wait one hour")
+		time.Sleep(time.Hour)
 		os.Exit(0)
 	}
 
@@ -80,7 +82,7 @@ func RunSftpPlugin() {
 	if *sftpRoot == "" {
 		common.Fatal(lgr, errors.New("sftproot empty"))
 	}
-	dss, err := sftpc.MakeSftpClientDssa(*sftpUser, *sftpAddress, *sftpIdent, *sftpRoot, *cf.ConcurrencyFlag, sftpc.GetSftpClient, knownHostsFile)
+	dss, err := sftpc.MakeSftpClientDssa(*sftpUser, *sftpAddress, *sftpIdent, *sftpRoot, *cf.ConcurrencyFlag, sftputil.GetSftpClient, knownHostsFile)
 	if err != nil {
 		common.Fatal(lgr, fmt.Errorf("sftpc.MakeSftpClientDssa: %s: %v", exe, err))
 	}

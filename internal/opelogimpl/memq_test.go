@@ -11,7 +11,7 @@ import (
 
 func TestMemqSimple(t *testing.T) {
 	const conc = 4
-	lgr := common.DbgLogger()
+	lgr := common.GetLogger()
 	mq := NewMemQueue(conc)
 	var wg sync.WaitGroup
 	wg.Add(1)

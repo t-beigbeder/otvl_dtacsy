@@ -1,7 +1,6 @@
-package sftps
+package sftputil
 
 import (
-	"errors"
 	"testing"
 	"time"
 
@@ -10,8 +9,9 @@ import (
 )
 
 func TestSftps(t *testing.T) {
-	lgr := common.DbgLogger()
-	user, address, identity, root := GetSftpsEnv()
+	lgr := common.GetLogger()
+	user, address, identity, root, err := GetSftpsEnv()
+	require.NoError(t, err)
 	var cb ShutdownCb
 	var gerr error
 	go func() {
@@ -19,12 +19,18 @@ func TestSftps(t *testing.T) {
 		if gerr != nil {
 			return
 		}
-		gerr = errors.New("RunInsecureSftpServer terminated")
+		lgr.Debug(t.Name(), "terminated", true)
 	}()
-	time.Sleep(time.Second)
+	time.Sleep(100 * time.Millisecond)
 	if gerr != nil {
 		lgr.Error(t.Name(), "err", gerr)
 	}
+	sftc, err := GetSftpClient(user, address, identity, "")
+	require.NoError(t, err)
+	fi, err := sftc.Lstat(".")
+	require.NoError(t, err)
+	lgr.Debug(t.Name(), "fi", fi.Name())
+	// time.Sleep(100*time.Millisecond)
 	if cb != nil {
 		cb()
 	}
