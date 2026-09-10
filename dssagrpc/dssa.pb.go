@@ -277,6 +277,7 @@ type DataEntry struct {
 	Error         string                 `protobuf:"bytes,12,opt,name=error,proto3" json:"error,omitempty"`
 	ErrNotExist   bool                   `protobuf:"varint,13,opt,name=err_not_exist,json=errNotExist,proto3" json:"err_not_exist,omitempty"`
 	Id            string                 `protobuf:"bytes,14,opt,name=id,proto3" json:"id,omitempty"`
+	AddMeta       []byte                 `protobuf:"bytes,16,opt,name=add_meta,json=addMeta,proto3" json:"add_meta,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -414,6 +415,13 @@ func (x *DataEntry) GetId() string {
 		return x.Id
 	}
 	return ""
+}
+
+func (x *DataEntry) GetAddMeta() []byte {
+	if x != nil {
+		return x.AddMeta
+	}
+	return nil
 }
 
 type SetStatDataEntry struct {
@@ -824,7 +832,7 @@ const file_grpc_dssa_proto_rawDesc = "" +
 	"\tChecksums\x12\x1c\n" +
 	"\tchecksums\x18\x01 \x01(\tR\tchecksums\"8\n" +
 	"\vDataEntries\x12)\n" +
-	"\aentries\x18\x01 \x03(\v2\x0f.dssa.DataEntryR\aentries\"\xc8\x03\n" +
+	"\aentries\x18\x01 \x03(\v2\x0f.dssa.DataEntryR\aentries\"\xe3\x03\n" +
 	"\tDataEntry\x12\x15\n" +
 	"\x06is_dir\x18\x01 \x01(\bR\x05isDir\x12\x12\n" +
 	"\x04path\x18\x02 \x01(\tR\x04path\x12\x12\n" +
@@ -842,7 +850,8 @@ const file_grpc_dssa_proto_rawDesc = "" +
 	"\x0fsym_link_target\x18\v \x01(\tR\rsymLinkTarget\x12\x14\n" +
 	"\x05error\x18\f \x01(\tR\x05error\x12\"\n" +
 	"\rerr_not_exist\x18\r \x01(\bR\verrNotExist\x12\x0e\n" +
-	"\x02id\x18\x0e \x01(\tR\x02id\"v\n" +
+	"\x02id\x18\x0e \x01(\tR\x02id\x12\x19\n" +
+	"\badd_meta\x18\x10 \x01(\fR\aaddMeta\"v\n" +
 	"\x10SetStatDataEntry\x12.\n" +
 	"\n" +
 	"data_entry\x18\x01 \x01(\v2\x0f.dssa.DataEntryR\tdataEntry\x12\x17\n" +

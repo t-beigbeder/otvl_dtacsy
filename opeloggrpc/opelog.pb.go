@@ -220,6 +220,7 @@ type StoredEntry struct {
 	IsSymLink     bool                   `protobuf:"varint,10,opt,name=is_sym_link,json=isSymLink,proto3" json:"is_sym_link,omitempty"`
 	SymLinkTarget string                 `protobuf:"bytes,11,opt,name=sym_link_target,json=symLinkTarget,proto3" json:"sym_link_target,omitempty"`
 	Children      []string               `protobuf:"bytes,12,rep,name=children,proto3" json:"children,omitempty"`
+	AddMeta       []byte                 `protobuf:"bytes,13,opt,name=add_meta,json=addMeta,proto3" json:"add_meta,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -334,6 +335,13 @@ func (x *StoredEntry) GetSymLinkTarget() string {
 func (x *StoredEntry) GetChildren() []string {
 	if x != nil {
 		return x.Children
+	}
+	return nil
+}
+
+func (x *StoredEntry) GetAddMeta() []byte {
+	if x != nil {
+		return x.AddMeta
 	}
 	return nil
 }
@@ -830,7 +838,7 @@ const file_grpc_opelog_proto_rawDesc = "" +
 	"\x06Rights\x12\x12\n" +
 	"\x04read\x18\x01 \x01(\bR\x04read\x12\x14\n" +
 	"\x05write\x18\x02 \x01(\bR\x05write\x12\x18\n" +
-	"\aexecute\x18\x03 \x01(\bR\aexecute\"\x92\x03\n" +
+	"\aexecute\x18\x03 \x01(\bR\aexecute\"\xad\x03\n" +
 	"\vStoredEntry\x12\x1d\n" +
 	"\n" +
 	"is_present\x18\x01 \x01(\bR\tisPresent\x12\x15\n" +
@@ -846,7 +854,8 @@ const file_grpc_opelog_proto_rawDesc = "" +
 	"\vis_sym_link\x18\n" +
 	" \x01(\bR\tisSymLink\x12&\n" +
 	"\x0fsym_link_target\x18\v \x01(\tR\rsymLinkTarget\x12\x1a\n" +
-	"\bchildren\x18\f \x03(\tR\bchildren\"\xce\x01\n" +
+	"\bchildren\x18\f \x03(\tR\bchildren\x12\x19\n" +
+	"\badd_meta\x18\r \x01(\fR\aaddMeta\"\xce\x01\n" +
 	"\x05Event\x12%\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x11.opelog.EventCodeR\x04kind\x12*\n" +
 	"\x06origin\x18\x02 \x01(\x0e2\x12.opelog.OriginCodeR\x06origin\x12\x1d\n" +

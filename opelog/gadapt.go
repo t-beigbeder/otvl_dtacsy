@@ -1,6 +1,9 @@
 package opelog
 
 import (
+	"bytes"
+	"slices"
+
 	"github.com/t-beigbeder/vdasync/opeloggrpc"
 )
 
@@ -12,8 +15,6 @@ func GrpcStoredEntry2StoredEntry(gse *opeloggrpc.StoredEntry) *StoredEntry {
 	if gse == nil {
 		return nil
 	}
-	children := make([]string, len(gse.Children))
-	copy(children, gse.Children)
 	return &StoredEntry{
 		IsPresent:     gse.IsPresent,
 		IsDir:         gse.IsDir,
@@ -26,7 +27,8 @@ func GrpcStoredEntry2StoredEntry(gse *opeloggrpc.StoredEntry) *StoredEntry {
 		OtherRights:   gr2ser(gse.OtherRights),
 		IsSymLink:     gse.IsSymLink,
 		SymLinkTarget: gse.SymLinkTarget,
-		Children:      children,
+		Children:      slices.Clone(gse.Children),
+		AddMeta:       bytes.Clone(gse.AddMeta),
 	}
 }
 
@@ -117,15 +119,13 @@ func GrpcLogicalEntry2LogicalEntry(gle *opeloggrpc.LogicalEntry) *LogicalEntry {
 	if gle == nil {
 		return nil
 	}
-	dirupChildren := make([]string, len(gle.DirupChildren))
-	copy(dirupChildren, gle.DirupChildren)
 	return &LogicalEntry{
 		SourceStates:  gses2ses(gle.SourceStates),
 		SourceEvents:  gevs2evs(gle.SourceEvents),
 		SourceVerif:   gvr2vr(gle.SourceVerif),
 		TargetStates:  gses2ses(gle.TargetStates),
 		DirupState:    GrpcStoredEntry2StoredEntry(gle.DirupState),
-		DirupChildren: dirupChildren,
+		DirupChildren: slices.Clone(gle.DirupChildren),
 		TargetEvents:  gevs2evs(gle.TargetEvents),
 		TargetVerif:   gvr2vr(gle.TargetVerif),
 		StatsList:     gcss2css(gle.StatsList),
@@ -140,8 +140,6 @@ func StoredEntry2GrpcStoredEntry(se *StoredEntry) *opeloggrpc.StoredEntry {
 	if se == nil {
 		return nil
 	}
-	children := make([]string, len(se.Children))
-	copy(children, se.Children)
 	return &opeloggrpc.StoredEntry{
 		IsPresent:     se.IsPresent,
 		IsDir:         se.IsDir,
@@ -154,7 +152,8 @@ func StoredEntry2GrpcStoredEntry(se *StoredEntry) *opeloggrpc.StoredEntry {
 		OtherRights:   ser2gr(se.OtherRights),
 		IsSymLink:     se.IsSymLink,
 		SymLinkTarget: se.SymLinkTarget,
-		Children:      children,
+		Children:      slices.Clone(se.Children),
+		AddMeta:       bytes.Clone(se.AddMeta),
 	}
 }
 
@@ -245,15 +244,13 @@ func LogicalEntry2GrpcLogicalEntry(le *LogicalEntry) *opeloggrpc.LogicalEntry {
 	if le == nil {
 		return nil
 	}
-	dirupChildren := make([]string, len(le.DirupChildren))
-	copy(dirupChildren, le.DirupChildren)
 	return &opeloggrpc.LogicalEntry{
 		SourceStates:  ses2gses(le.SourceStates),
 		SourceEvents:  evs2gevs(le.SourceEvents),
 		SourceVerif:   vr2gvr(le.SourceVerif),
 		TargetStates:  ses2gses(le.TargetStates),
 		DirupState:    StoredEntry2GrpcStoredEntry(le.DirupState),
-		DirupChildren: dirupChildren,
+		DirupChildren: slices.Clone(le.DirupChildren),
 		TargetEvents:  evs2gevs(le.TargetEvents),
 		TargetVerif:   vr2gvr(le.TargetVerif),
 		StatsList:     css2gcss(le.StatsList),

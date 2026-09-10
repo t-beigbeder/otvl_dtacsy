@@ -10,8 +10,8 @@ import (
 func TestAll(t *testing.T) {
 	t.Skip("wip")
 	tds, err := NewTestDss(&TestDssOptions{
-		Lgr: common.DbgLogger(),
-		Kind: "sftp",
+		Lgr:         common.DbgLogger(),
+		Kind:        "sftp",
 		PluginLevel: "DEBUG",
 	})
 	require.NoError(t, err)

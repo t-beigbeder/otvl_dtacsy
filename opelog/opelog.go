@@ -1,6 +1,10 @@
 package opelog
 
 import (
+	"bytes"
+	"slices"
+
+	"github.com/t-beigbeder/vdasync/dssa"
 	"github.com/t-beigbeder/vdasync/opeloggrpc"
 )
 
@@ -44,6 +48,20 @@ type Rights struct {
 	Execute bool
 }
 
+func (nr *Rights) Equal(or *Rights) (result bool) {
+	if nr.Read != or.Read {
+		return
+	}
+	if nr.Write != or.Write {
+		return
+	}
+	if nr.Execute != or.Execute {
+		return
+	}
+	result = true
+	return
+}
+
 type StoredEntry struct {
 	IsPresent     bool
 	IsDir         bool
@@ -57,6 +75,80 @@ type StoredEntry struct {
 	IsSymLink     bool
 	SymLinkTarget string
 	Children      []string
+	AddMeta       []byte
+}
+
+func (se *StoredEntry) HasChild(cChild string) bool {
+	return slices.Contains(se.Children, cChild)
+}
+
+func (nse *StoredEntry) Equal(ose *StoredEntry) (result bool) {
+	if nse.IsPresent != ose.IsPresent {
+		return
+	}
+	if nse.IsDir != ose.IsDir {
+		return
+	}
+	if nse.Size != ose.Size {
+		return
+	}
+	if nse.Mtime != ose.Mtime {
+		return
+	}
+	if nse.User != ose.User {
+		return
+	}
+	if !nse.UserRights.Equal(ose.UserRights) {
+		return
+	}
+	if nse.Group != ose.Group {
+		return
+	}
+	if !nse.GroupRights.Equal(ose.GroupRights) {
+		return
+	}
+	if !nse.OtherRights.Equal(ose.OtherRights) {
+		return
+	}
+	if nse.IsSymLink != ose.IsSymLink {
+		return
+	}
+	if nse.SymLinkTarget != ose.SymLinkTarget {
+		return
+	}
+	if len(nse.Children) != len(ose.Children) {
+		return
+	}
+	for _, nChild := range nse.Children {
+		if !ose.HasChild(nChild) {
+			return
+		}
+	}
+	if !bytes.Equal(nse.AddMeta, ose.AddMeta) {
+		return
+	}
+	result = true
+	return
+}
+
+func dr2r(dr *dssa.Rights) *Rights {
+	return &Rights{Read: dr.Read, Write: dr.Write, Execute: dr.Execute}
+}
+
+func FromDataEntry(dse *dssa.DataEntry) *StoredEntry {
+	return &StoredEntry{
+		IsDir:         dse.IsDir,
+		Size:          dse.Size,
+		Mtime:         dse.Mtime,
+		User:          int32(dse.User),
+		UserRights:    dr2r(&dse.UserRights),
+		Group:         int32(dse.Group),
+		GroupRights:   dr2r(&dse.GroupRights),
+		OtherRights:   dr2r(&dse.OtherRights),
+		IsSymLink:     dse.IsSymLink,
+		SymLinkTarget: dse.SymLinkTarget,
+		AddMeta:       bytes.Clone(dse.AddMeta),
+	}
 }
 
 type Event struct {

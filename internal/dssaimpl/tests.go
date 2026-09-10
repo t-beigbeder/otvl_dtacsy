@@ -15,15 +15,15 @@ import (
 type TestDss struct {
 	kind string
 	dss  dssa.Dssa
-	rps []*plugin.RunningPlugin
+	rps  []*plugin.RunningPlugin
 }
 
 type TestDssOptions struct {
 	Kind          string // "localFiles", "sftp"
-	Lgr *slog.Logger
-	PluginType string // defaults to vda + Kind
+	Lgr           *slog.Logger
+	PluginType    string // defaults to vda + Kind
 	PluginAddArgs string // defaults to [-notls, -log, stderr, -level, <LEVEL>]
-	PluginLevel string // defaults to ERROR
+	PluginLevel   string // defaults to ERROR
 	PluginGetArgs func(*TestDssOptions) string
 	SftpUser      string
 	SftpHost      string
@@ -39,7 +39,7 @@ func testDir() string {
 	return path.Dir(filename)
 }
 
-func (tdo *TestDssOptions) getPluginConfig()(*config.CliConfig, error) {
+func (tdo *TestDssOptions) getPluginConfig() (*config.CliConfig, error) {
 	pt := tdo.PluginType
 	if pt == "" {
 		pt = "vda" + tdo.Kind
@@ -71,7 +71,7 @@ plugins:
 	return config.Load(conf)
 }
 
-func (tdo *TestDssOptions)GetPluginTestDss() (*TestDss, error) {
+func (tdo *TestDssOptions) GetPluginTestDss() (*TestDss, error) {
 	cf, err := tdo.getPluginConfig()
 	if err != nil {
 		return nil, err

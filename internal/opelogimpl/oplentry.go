@@ -12,11 +12,11 @@ import (
 )
 
 type oplLogicalEntry struct {
-	isDir   bool
-	relPath string
-	plgr    *slog.Logger
-	owi     *oplWalkerImpl
-	le      *opelog.LogicalEntry
+	hasChanges bool
+	relPath    string
+	plgr       *slog.Logger
+	owi        *oplWalkerImpl
+	le         *opelog.LogicalEntry
 }
 
 func (ole *oplLogicalEntry) lgr() *slog.Logger {
@@ -39,7 +39,6 @@ func (ole *oplLogicalEntry) load() error {
 	if err := ole.target().load(); err != nil {
 		return err
 	}
-	ole.lgr().Debug("load: stop")
 	return errors.ErrUnsupported
 }
 
@@ -95,40 +94,40 @@ func (ose *oplStoredEntry) fullPath() string {
 	return path.Join(ose.root(), ose.relPath)
 }
 
-func (ose *oplStoredEntry) events() (evs []*opelog.Event) {
+func (ose *oplStoredEntry) events() (evs *[]*opelog.Event) {
 	if ose.isTarget {
-		evs = ose.le.TargetEvents
+		evs = &ose.le.TargetEvents
 	} else {
-		evs = ose.le.SourceEvents
+		evs = &ose.le.SourceEvents
 	}
 	return
 }
 
 func (ose *oplStoredEntry) existenceEv() (ev *opelog.Event) {
 	evs := ose.events()
-	for i := len(evs) - 1; i >= 0; i-- {
-		if evs[i].Kind == opelog.EVT_ABS || evs[i].Kind == opelog.EVT_EXIST {
-			return evs[i]
+	for i := len(*evs) - 1; i >= 0; i-- {
+		if (*evs)[i].Kind == opelog.EVT_ABS || (*evs)[i].Kind == opelog.EVT_EXIST {
+			return (*evs)[i]
 		}
 	}
 	return nil
 }
 
-func (ose *oplStoredEntry) states() (sts []*opelog.StoredEntry) {
+func (ose *oplStoredEntry) states() (sts *[]*opelog.StoredEntry) {
 	if ose.isTarget {
-		sts = ose.le.TargetStates
+		sts = &ose.le.TargetStates
 	} else {
-		sts = ose.le.SourceStates
+		sts = &ose.le.SourceStates
 	}
 	return
 }
 
 func (ose *oplStoredEntry) currentState() *opelog.StoredEntry {
 	sts := ose.states()
-	if len(sts) == 0 {
+	if len(*sts) == 0 {
 		return nil
 	}
-	return sts[len(sts)-1]
+	return (*sts)[len(*sts)-1]
 }
 
 func (ose *oplStoredEntry) dss() (ds dssa.Dssa) {
@@ -140,9 +139,25 @@ func (ose *oplStoredEntry) dss() (ds dssa.Dssa) {
 	return
 }
 
+func (ose *oplStoredEntry) newState(se *opelog.StoredEntry) {
+	sts := ose.states()
+	if len(*sts) == 0 {
+		*sts = append(*sts, se)
+		return
+	}
+	if se.Equal((*sts)[len(*sts)-1]) {
+		return
+	}
+	*sts = append(*sts, se)
+}
+
 func (ose *oplStoredEntry) newEvent(kind opelog.EventCode, origin opelog.OriginCode, sErr string) {
 	evs := ose.events()
-	evs = append(evs, &opelog.Event{Kind: kind, Origin: origin, TimeStamp: time.Now().Unix(), StateIndex: int32(len(ose.states()) - 1), Error: sErr})
+	*evs = append(*evs,
+		&opelog.Event{
+			Kind: kind, Origin: origin, TimeStamp: time.Now().Unix(),
+			StateIndex: int32(len(*ose.states()) - 1), Error: sErr})
+	ose.hasChanges = true
 }
 
 func (ose *oplStoredEntry) load() error {
@@ -153,11 +168,19 @@ func (ose *oplStoredEntry) load() error {
 	ose.lgr().Debug("load: start")
 	de, err := ose.dss().Stat(ose.fullPath())
 	if err != nil && !de.ErrNotExist {
-		sts := ose.states()
-		sts = append(sts, &opelog.StoredEntry{})
+		ose.newState(&opelog.StoredEntry{})
 		ose.newEvent(opelog.EVT_ABS, opelog.ORI_STAT, err.Error())
 		return err
 	}
-	ose.lgr().Debug("load: stop")
+	if de.ErrNotExist {
+		ose.newState(&opelog.StoredEntry{})
+		ose.newEvent(opelog.EVT_ABS, opelog.ORI_STAT, "")
+		return nil
+	}
+	se := opelog.FromDataEntry(de)
+	se.IsPresent = true
+	ose.newState(se)
+	ose.newEvent(opelog.EVT_EXIST, opelog.ORI_STAT, "")
+
 	return nil
 }

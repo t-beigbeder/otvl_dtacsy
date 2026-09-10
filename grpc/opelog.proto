@@ -23,6 +23,7 @@ message StoredEntry {
     bool is_sym_link = 10;
     string sym_link_target = 11;
     repeated string children = 12;
+    bytes add_meta = 13;
 }
 
 enum EventCode {

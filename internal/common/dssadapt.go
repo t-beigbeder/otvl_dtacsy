@@ -1,6 +1,7 @@
 package common
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -32,6 +33,7 @@ func DssDte2GrpcDte(ddte *dssa.DataEntry) *dssagrpc.DataEntry {
 		Error:         sErr,
 		ErrNotExist:   ddte.ErrNotExist,
 		Id:            ddte.Id,
+		AddMeta:       bytes.Clone(ddte.AddMeta),
 	}
 }
 
@@ -44,6 +46,7 @@ func GrpcDte2DssDte(gdte *dssagrpc.DataEntry) *dssa.DataEntry {
 	if gdte.Error != "" {
 		err = errors.New(gdte.Error)
 	}
+
 	return &dssa.DataEntry{
 		IsDir:         gdte.IsDir,
 		Path:          gdte.Path,
@@ -60,6 +63,7 @@ func GrpcDte2DssDte(gdte *dssagrpc.DataEntry) *dssa.DataEntry {
 		Error:         err,
 		ErrNotExist:   gdte.ErrNotExist,
 		Id:            gdte.Id,
+		AddMeta:       bytes.Clone(gdte.AddMeta),
 	}
 }
 
