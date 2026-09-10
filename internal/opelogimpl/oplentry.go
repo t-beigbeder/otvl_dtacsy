@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"path"
+	"slices"
 	"strings"
 	"time"
 
@@ -205,8 +206,19 @@ func (ose *oplStoredEntry) load() error {
 	ose.newState(se)
 	ose.newEvent(opelog.EVT_EXIST, opelog.ORI_STAT, "")
 
-	for _, cde := range cdes {
-		if err := ose.queueChild(path.Base(cde.Path)); err != nil {
+	var sChildren []string
+	if ose.isTarget {
+		sse := ose.source().currentState()
+		if sse != nil {
+			sChildren = sse.Children
+		}
+	}
+	for _, child := range children {
+		// FIXME: {S} children can come before {T} parent is done
+		if sChildren != nil && slices.Contains(sChildren, child) {
+			continue
+		}
+		if err := ose.queueChild(child); err != nil {
 			return err
 		}
 	}
