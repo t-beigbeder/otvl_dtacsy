@@ -21,3 +21,12 @@ func TestRP(t *testing.T) {
 	require.Equal(t, "path1", RelPath("/path/to/path1", "/path/to"))
 	require.Equal(t, "path2", RelPath("/path2", "/"))
 }
+
+func TestPP(t *testing.T) {
+	require.Equal(t, "d", ParentPath("d/t"))
+	require.Equal(t, "/d", ParentPath("/d/t"))
+	require.Equal(t, "", ParentPath("d"))
+	require.Equal(t, "/", ParentPath("/d"))
+	require.Equal(t, "", ParentPath(""))
+	require.Equal(t, "/", ParentPath("/"))
+}

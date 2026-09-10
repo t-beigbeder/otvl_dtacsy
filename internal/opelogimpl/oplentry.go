@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/t-beigbeder/vdasync/dssa"
+	"github.com/t-beigbeder/vdasync/internal/common"
 	"github.com/t-beigbeder/vdasync/opelog"
 )
 
@@ -18,6 +19,10 @@ type oplLogicalEntry struct {
 	plgr       *slog.Logger
 	owi        *oplWalkerImpl
 	le         *opelog.LogicalEntry
+	sChildrenQ []string
+	tChildrenQ []string
+	sParentQ   bool
+	tParentQ   bool
 }
 
 func (ole *oplLogicalEntry) lgr() *slog.Logger {
@@ -43,6 +48,36 @@ func (ole *oplLogicalEntry) load() error {
 	return nil
 }
 
+func (ole *oplLogicalEntry) queueChildren() error {
+	merged := slices.Clone(ole.sChildrenQ)
+	for _, childRp := range ole.tChildrenQ {
+		if !slices.Contains(ole.sChildrenQ, childRp) {
+			merged = append(merged, childRp)
+		}
+	}
+	ole.sChildrenQ, ole.tChildrenQ = nil, nil
+	for _, childRp := range merged {
+		if err := ole.owi.oplq.Put(path.Join(ole.relPath, childRp)); err != nil {
+			ole.owi.owErr(ole.lgr(), "oplq.Put error", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func (ole *oplLogicalEntry) queueParent() error {
+	var err error
+	if ole.sParentQ || ole.tParentQ {
+		err = ole.owi.oplq.Put(common.ParentPath(ole.relPath))
+		ole.sParentQ, ole.tParentQ = false, false
+	}
+	if err != nil {
+		ole.owi.owErr(ole.lgr(), "oplq.Put error", err)
+
+	}
+	return err
+}
+
 func (ole *oplLogicalEntry) process() error {
 	ole.lgr().Debug("process: start")
 	var (
@@ -59,6 +94,12 @@ func (ole *oplLogicalEntry) process() error {
 			err = errors.ErrUnsupported
 		}
 		if err != nil {
+			break
+		}
+		if err = ole.queueChildren(); err != nil {
+			break
+		}
+		if err = ole.queueParent(); err != nil {
 			break
 		}
 	}
@@ -169,6 +210,22 @@ func (ose *oplStoredEntry) queueChild(child string) error {
 	return nil
 }
 
+func (ose *oplStoredEntry) setChildrenQ(children []string) {
+	if ose.isTarget {
+		ose.tChildrenQ = slices.Clone(children)
+	} else {
+		ose.sChildrenQ = slices.Clone(children)
+	}
+}
+
+func (ose *oplStoredEntry) setParentQ() {
+	if ose.isTarget {
+		ose.tParentQ = true
+	} else {
+		ose.sParentQ = true
+	}
+}
+
 func (ose *oplStoredEntry) load() error {
 	eev := ose.existenceEv()
 	if eev != nil && eev.Error == "" {
@@ -186,7 +243,7 @@ func (ose *oplStoredEntry) load() error {
 		ose.newEvent(opelog.EVT_ABS, opelog.ORI_STAT, "")
 		return nil
 	}
-	var children []string
+	var children, fCn []string
 	var cdes []*dssa.DataEntry
 	if de.IsDir {
 		cdes, err = ose.dss().List(ose.fullPath())
@@ -197,30 +254,23 @@ func (ose *oplStoredEntry) load() error {
 			ose.newEvent(opelog.EVT_EXIST, opelog.ORI_STAT, err.Error())
 			return err
 		}
+
 		for _, cde := range cdes {
-			children = append(children, path.Base(cde.Path))
+			if cde.IsDir {
+				children = append(children, path.Base(cde.Path))
+			} else {
+				fCn = append(fCn, path.Base(cde.Path))
+			}
+			children = slices.Concat(children, fCn)
+			ose.setChildrenQ(children)
 		}
+	} else {
+		ose.setParentQ()
 	}
 	se := opelog.FromDataEntry(de, children)
 	se.IsPresent = true
 	ose.newState(se)
 	ose.newEvent(opelog.EVT_EXIST, opelog.ORI_STAT, "")
 
-	var sChildren []string
-	if ose.isTarget {
-		sse := ose.source().currentState()
-		if sse != nil {
-			sChildren = sse.Children
-		}
-	}
-	for _, child := range children {
-		// FIXME: {S} children can come before {T} parent is done
-		if sChildren != nil && slices.Contains(sChildren, child) {
-			continue
-		}
-		if err := ose.queueChild(child); err != nil {
-			return err
-		}
-	}
 	return nil
 }

@@ -77,6 +77,14 @@ func RelPath(fullPath, rootPath string) string {
 	return strings.Replace(fullPath, rootPath, "", 1)
 }
 
+func ParentPath(path_ string) string {
+	pp := path.Dir(path_)
+	if pp == "." {
+		pp = ""
+	}
+	return pp
+}
+
 func MakeParents(dss dssa.Dssa, path_ string) error {
 	de, _ := dss.Stat(path_)
 	if de.Error != nil && !de.ErrNotExist {
