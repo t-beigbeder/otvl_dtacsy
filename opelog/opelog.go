@@ -135,7 +135,7 @@ func dr2r(dr *dssa.Rights) *Rights {
 	return &Rights{Read: dr.Read, Write: dr.Write, Execute: dr.Execute}
 }
 
-func FromDataEntry(dse *dssa.DataEntry) *StoredEntry {
+func FromDataEntry(dse *dssa.DataEntry, children []string) *StoredEntry {
 	return &StoredEntry{
 		IsDir:         dse.IsDir,
 		Size:          dse.Size,
@@ -147,6 +147,7 @@ func FromDataEntry(dse *dssa.DataEntry) *StoredEntry {
 		OtherRights:   dr2r(&dse.OtherRights),
 		IsSymLink:     dse.IsSymLink,
 		SymLinkTarget: dse.SymLinkTarget,
+		Children:      slices.Clone(children),
 		AddMeta:       bytes.Clone(dse.AddMeta),
 	}
 }

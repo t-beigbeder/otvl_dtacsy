@@ -46,35 +46,20 @@ func (ow *oplWalkerImpl) hasGoal(goal string) bool {
 	}
 	return false
 }
-func (ow *oplWalkerImpl) readPathFromQueue() (bool, string, error) {
-	relPathWithSlash, err := ow.oplq.Get()
-	if err != nil {
-		return false, "", err
-	}
-	isDir := false
-	relPath := relPathWithSlash
-	if relPathWithSlash == "" || string(relPathWithSlash[len(relPathWithSlash)-1]) == "/" {
-		isDir = true
-		if relPath != "" {
-			relPath = relPathWithSlash[:len(relPathWithSlash)-1]
-		}
-	}
-	return isDir, relPath, nil
-}
 
 func (ow *oplWalkerImpl) work(wkn int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	lgr := ow.lgr.With("worker", wkn)
 	lgr.Debug("oplWalkerImpl.work: start", "worker", wkn)
 	for {
-		isDir, relPath, err := ow.readPathFromQueue()
+		relPath, err := ow.oplq.Get()
 		if err != nil {
 			if err != common.ErrReadClosedQueue {
 				ow.owErr(lgr, "oplWalkerImpl.work", err)
 			}
 			break
 		}
-		ow.lgr.Debug("oplWalkerImpl.work", "worker", wkn, "readPathFromQueue", relPath, "isDir", isDir)
+		ow.lgr.Debug("oplWalkerImpl.work", "worker", wkn, "readPathFromQueue", relPath)
 		le, err := ow.oplm.GetLogicalEntry(relPath)
 		if err != nil {
 			ow.owErr(lgr, "oplWalkerImpl.work: GetLogicalEntry", err)
@@ -128,7 +113,7 @@ func NewOplWalker(lgr *slog.Logger, conc int, oplq opelog.Queue, oplm opelog.Ope
 		conc = 1
 	}
 	if oplq == nil {
-		oplq = NewMemQueue(conc)
+		oplq = NewMemQueue()
 	}
 	return &oplWalkerImpl{
 		lgr:  lgr,

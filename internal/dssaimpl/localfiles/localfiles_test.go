@@ -89,6 +89,10 @@ func TestFileFunctions(t *testing.T) {
 	h1, err := lfd.Checksum("sha256", ft)
 	require.Nil(t, err)
 	require.Equal(t, "sha256:4b86be7f5fe5776cd535cdf1e81fdd77c204df48c751f61c121b3e72f6767e1e", h1)
+
+	des, err := lfd.List(td1)
+	require.NoError(t, err)
+	_ = des
 }
 
 func TestFileGetPut(t *testing.T) {

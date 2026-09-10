@@ -39,7 +39,7 @@ func (ole *oplLogicalEntry) load() error {
 	if err := ole.target().load(); err != nil {
 		return err
 	}
-	return errors.ErrUnsupported
+	return nil
 }
 
 func (ole *oplLogicalEntry) process() error {
@@ -160,6 +160,14 @@ func (ose *oplStoredEntry) newEvent(kind opelog.EventCode, origin opelog.OriginC
 	ose.hasChanges = true
 }
 
+func (ose *oplStoredEntry) queueChild(child string) error {
+	if err := ose.owi.oplq.Put(path.Join(ose.relPath, child)); err != nil {
+		ose.owi.owErr(ose.lgr(), "oplq.Put error", err)
+		return err
+	}
+	return nil
+}
+
 func (ose *oplStoredEntry) load() error {
 	eev := ose.existenceEv()
 	if eev != nil && eev.Error == "" {
@@ -177,10 +185,30 @@ func (ose *oplStoredEntry) load() error {
 		ose.newEvent(opelog.EVT_ABS, opelog.ORI_STAT, "")
 		return nil
 	}
-	se := opelog.FromDataEntry(de)
+	var children []string
+	var cdes []*dssa.DataEntry
+	if de.IsDir {
+		cdes, err = ose.dss().List(ose.fullPath())
+		if err != nil {
+			se := opelog.FromDataEntry(de, nil)
+			se.IsPresent = true
+			ose.newState(se)
+			ose.newEvent(opelog.EVT_EXIST, opelog.ORI_STAT, err.Error())
+			return err
+		}
+		for _, cde := range cdes {
+			children = append(children, path.Base(cde.Path))
+		}
+	}
+	se := opelog.FromDataEntry(de, children)
 	se.IsPresent = true
 	ose.newState(se)
 	ose.newEvent(opelog.EVT_EXIST, opelog.ORI_STAT, "")
 
+	for _, cde := range cdes {
+		if err := ose.queueChild(path.Base(cde.Path)); err != nil {
+			return err
+		}
+	}
 	return nil
 }

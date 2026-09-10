@@ -75,7 +75,7 @@ func (lq *largeQ) Get() (string, error) {
 		prodSub := make(chan bool)
 		lq.prodSubs = append(lq.prodSubs, prodSub)
 		lq.mx.Unlock()
-		<-prodSub // FIXME: can block
+		<-prodSub
 		lq.mx.Lock()
 	}
 	defer lq.mx.Unlock()

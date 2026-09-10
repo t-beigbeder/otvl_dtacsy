@@ -192,9 +192,9 @@ func TestQueuesSimple(t *testing.T) {
 		}
 		switch test.qType {
 		default:
-			tq = NewMemQueue(test.conc)
+			tq = NewMemQueue()
 		case "MemQueue":
-			tq = NewMemQueue(test.conc)
+			tq = NewMemQueue()
 		case "LargeQueue":
 			tq, err = NewLargeQ(test.lgr, td, test.segSize)
 		}

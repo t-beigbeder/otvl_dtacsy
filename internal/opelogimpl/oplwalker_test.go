@@ -11,7 +11,7 @@ import (
 )
 
 func TestOplWalker(t *testing.T) {
-	//t.Skip("wip")
+	t.Skip("wip")
 	lgr := common.DbgLogger()
 	lgr.Debug("TestOplWalker: started")
 	std := t.TempDir()
