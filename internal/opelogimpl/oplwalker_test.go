@@ -12,10 +12,11 @@ import (
 )
 
 func TestOplWalker(t *testing.T) {
-	t.Skip("wip")
+	//t.Skip("wip")
 	lgr := common.DbgLogger()
 	lgr = common.InfoLogger()
 	//lgr = common.GetLogger()
+	//lgr, _ = common.CliLogger("TestOplWalker", "DEBUG+2", "")
 	lgr.Debug("TestOplWalker: started")
 	std := t.TempDir()
 	require.NoError(t, common.FileTreeGenerate(std, 100, 3000, 2, 4096, false, 2))
@@ -37,4 +38,11 @@ func TestOplWalker(t *testing.T) {
 		localfiles.MakeLocalFilesDssa(), localfiles.MakeLocalFilesDssa(), std, ttd)
 	err = ow.Run()
 	require.NoError(t, err)
+	owi, ok := ow.(*oplWalkerImpl)
+	require.True(t, ok)
+	oplmi, ok := owi.oplm.(*m2fMng)
+	if len(oplmi.les) > 3101 {
+		lgr.Debug("here")
+	}
+	require.Equal(t, 3000+100+1, len(oplmi.les))
 }

@@ -28,6 +28,10 @@ func (ole *oplLogicalEntry) lgr() *slog.Logger {
 	return ole.plgr.With("relPath", ole.relPath)
 }
 
+func (ole *oplLogicalEntry) detail(msg string, args ...any) {
+	ole.lgr().Log(ole.owi.bg, slog.LevelDebug+2, msg, args...)
+}
+
 func (ole *oplLogicalEntry) source() *oplStoredEntry {
 	return &oplStoredEntry{oplLogicalEntry: ole}
 }
@@ -55,6 +59,8 @@ func (ole *oplLogicalEntry) queueChildren() error {
 }
 
 func (ole *oplLogicalEntry) computeNext() error {
+	ole.owi.mx.Lock()
+	defer ole.owi.mx.Unlock()
 	if !ole.source().isDone() || !ole.target().isDone() || ole.le.DepCount != 0 {
 		return nil
 	}
@@ -139,6 +145,10 @@ func (ose *oplStoredEntry) pfx() string {
 
 func (ose *oplStoredEntry) lgr() *slog.Logger {
 	return ose.plgr.With("path", path.Join(ose.pfx(), ose.relPath))
+}
+
+func (ose *oplStoredEntry) detail(msg string, args ...any) {
+	ose.lgr().Log(ose.owi.bg, slog.LevelDebug+2, msg, args...)
 }
 
 func (ose *oplStoredEntry) root() string {

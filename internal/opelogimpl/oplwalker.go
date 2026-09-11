@@ -1,6 +1,7 @@
 package opelogimpl
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -30,6 +31,7 @@ type oplWalkerImpl struct {
 	tRoot      string
 	gErrs      []error
 	syncTicker *time.Ticker
+	bg context.Context
 }
 
 func (ow *oplWalkerImpl) owErr(lgr *slog.Logger, msg string, err error) error {
@@ -38,6 +40,10 @@ func (ow *oplWalkerImpl) owErr(lgr *slog.Logger, msg string, err error) error {
 	defer ow.mx.Unlock()
 	ow.gErrs = append(ow.gErrs, fmt.Errorf("%s: %v", msg, err))
 	return err
+}
+
+func (ow *oplWalkerImpl) detail(lgr *slog.Logger, msg string, args ...any) {
+	lgr.Log(ow.bg, slog.LevelDebug+2, msg, args...)
 }
 
 func (ow *oplWalkerImpl) hasGoal(goal string) bool {
@@ -73,7 +79,7 @@ func (ow *oplWalkerImpl) work(wkn int, wg *sync.WaitGroup) {
 			}
 			break
 		}
-		ow.lgr.Debug("oplWalkerImpl.work", "worker", wkn, "readPathFromQueue", relPath)
+		ow.detail(ow.lgr, "oplWalkerImpl.work", "worker", wkn, "readPathFromQueue", relPath)
 		le, err := ow.oplm.GetLogicalEntry(relPath)
 		if err != nil {
 			ow.owErr(lgr, "oplWalkerImpl.work: GetLogicalEntry", err)
@@ -123,7 +129,7 @@ func (ow *oplWalkerImpl) Run() error {
 	if len(ow.gErrs) > 0 {
 		err := fmt.Errorf("walker %d errors occured", len(ow.gErrs))
 		ow.lgr.Error("oplWalkerImpl.Run:", "err", err)
-		ow.lgr.Debug("oplWalkerImpl.Run:", "err", err, "details", ow.gErrs)
+		ow.detail(ow.lgr, "oplWalkerImpl.Run:", "err", err, "details", ow.gErrs)
 		return err
 	}
 	return nil
@@ -140,5 +146,6 @@ func NewOplWalker(lgr *slog.Logger, conc int, oplq opelog.Queue, oplm opelog.Ope
 		lgr:  lgr,
 		conc: conc, oplq: oplq, oplm: oplm, owo: owo,
 		sds: sds, tds: tds, sRoot: sRoot, tRoot: tRoot,
+		bg: context.Background(),
 	}
 }
