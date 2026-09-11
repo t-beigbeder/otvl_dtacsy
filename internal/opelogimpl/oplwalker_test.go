@@ -3,6 +3,7 @@ package opelogimpl
 import (
 	"path"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/t-beigbeder/vdasync/config"
@@ -13,6 +14,8 @@ import (
 func TestOplWalker(t *testing.T) {
 	t.Skip("wip")
 	lgr := common.DbgLogger()
+	lgr = common.InfoLogger()
+	//lgr = common.GetLogger()
 	lgr.Debug("TestOplWalker: started")
 	std := t.TempDir()
 	require.NoError(t, common.FileTreeGenerate(std, 100, 3000, 2, 4096, false, 2))
@@ -28,8 +31,10 @@ func TestOplWalker(t *testing.T) {
 	ow := NewOplWalker(
 		lgr, 4, nil, oplm,
 		&config.OpeLogOptionsType{
-			Goals: "load", // load, create, update/remove, verify
+			Goals:      "load", // load, create, update/remove, verify
+			SyncPeriod: int64(5 * time.Second),
 		},
 		localfiles.MakeLocalFilesDssa(), localfiles.MakeLocalFilesDssa(), std, ttd)
-	require.NoError(t, ow.Run())
+	err = ow.Run()
+	require.NoError(t, err)
 }

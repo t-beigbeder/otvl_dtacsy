@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/t-beigbeder/vdasync/config"
 	"github.com/t-beigbeder/vdasync/dssa"
@@ -17,17 +18,18 @@ type OplWalker interface {
 }
 
 type oplWalkerImpl struct {
-	mx    sync.Mutex
-	lgr   *slog.Logger
-	conc  int
-	oplq  opelog.Queue
-	oplm  opelog.OpeLogManager
-	owo   *config.OpeLogOptionsType
-	sds   dssa.Dssa
-	tds   dssa.Dssa
-	sRoot string
-	tRoot string
-	gErrs []error
+	mx         sync.Mutex
+	lgr        *slog.Logger
+	conc       int
+	oplq       opelog.Queue
+	oplm       opelog.OpeLogManager
+	owo        *config.OpeLogOptionsType
+	sds        dssa.Dssa
+	tds        dssa.Dssa
+	sRoot      string
+	tRoot      string
+	gErrs      []error
+	syncTicker *time.Ticker
 }
 
 func (ow *oplWalkerImpl) owErr(lgr *slog.Logger, msg string, err error) error {
@@ -45,6 +47,18 @@ func (ow *oplWalkerImpl) hasGoal(goal string) bool {
 		}
 	}
 	return false
+}
+
+func (ow *oplWalkerImpl) oplmSync() {
+	lgr := ow.lgr.With("worker", "oplmSync")
+	lgr.Debug("oplWalkerImpl.oplmSync: start")
+
+	for tick := range ow.syncTicker.C {
+		lgr.Info("oplWalkerImpl.oplmSync: tick", "tick", tick)
+		if err := ow.oplm.Sync(); err != nil {
+			ow.owErr(lgr, "failed to synchronize logs", err)
+		}
+	}
 }
 
 func (ow *oplWalkerImpl) work(wkn int, wg *sync.WaitGroup) {
@@ -92,8 +106,15 @@ func (ow *oplWalkerImpl) Run() error {
 		wg.Add(1)
 		go ow.work(wkn, &wg)
 	}
+	if ow.owo.SyncPeriod != 0 {
+		ow.syncTicker = time.NewTicker(time.Duration(ow.owo.SyncPeriod))
+		go ow.oplmSync()
+	}
 	ow.oplq.Put("")
 	wg.Wait()
+	if ow.owo.SyncPeriod != 0 {
+		ow.syncTicker.Stop()
+	}
 	if err := ow.oplm.Close(); err != nil {
 		ow.lgr.Error("oplWalkerImpl.Run: close logs", "err", err)
 		return err

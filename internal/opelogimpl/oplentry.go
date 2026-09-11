@@ -120,9 +120,6 @@ func (ole *oplLogicalEntry) process() error {
 	if err = ole.computeNext(); err != nil {
 		return err
 	}
-	// ole.queueParent()
-	// err = ole.owi.oplq.Put(common.ParentPath(ole.relPath)
-	// ole.owi.owErr(ole.lgr(), "oplq.Put error", err)
 
 	return err
 }

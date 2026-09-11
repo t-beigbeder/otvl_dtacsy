@@ -8,6 +8,9 @@ import (
 )
 
 func gr2ser(gr *opeloggrpc.Rights) *Rights {
+	if gr == nil {
+		return nil
+	}
 	return &Rights{Read: gr.Read, Write: gr.Write, Execute: gr.Execute}
 }
 
@@ -134,6 +137,9 @@ func GrpcLogicalEntry2LogicalEntry(gle *opeloggrpc.LogicalEntry) *LogicalEntry {
 }
 
 func ser2gr(ser *Rights) *opeloggrpc.Rights {
+	if ser == nil {
+		return nil
+	}
 	return &opeloggrpc.Rights{Read: ser.Read, Write: ser.Write, Execute: ser.Execute}
 }
 

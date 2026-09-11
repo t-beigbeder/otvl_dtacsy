@@ -104,8 +104,8 @@ func (m *m2fMng) Create(source string, target string) error {
 		return fmt.Errorf("m2fMng.Create: %s should be created without entries", m.path)
 	}
 	aio := opeloggrpc.OpeLogAllInOne{
-		SourceRoot: m.source,
-		TargetRoot: m.target,
+		SourceRoot: source,
+		TargetRoot: target,
 	}
 	bs, err := proto.Marshal(&aio)
 	if err != nil {
