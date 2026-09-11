@@ -50,7 +50,7 @@ type OpeLogOptionsType struct {
 	SyncOptionsType `yaml:"syncOptionsType"`
 	Goals           string `yaml:"goals"`
 	StatsTime       int64  `yaml:"statsTime"`
-	SyncPeriod      int64  `yaml:"syncPeriof"`
+	SyncPeriod      int64  `yaml:"syncPeriod"`
 }
 
 type SftpServerType struct {

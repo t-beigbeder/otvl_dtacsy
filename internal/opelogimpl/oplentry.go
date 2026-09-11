@@ -103,7 +103,7 @@ func (ole *oplLogicalEntry) process() error {
 	var (
 		err error
 	)
-	for _, goal := range strings.Split("load,create,update,verify", ",") {
+	for goal := range strings.SplitSeq("load,create,update,verify", ",") {
 		if !ole.owi.hasGoal(goal) {
 			continue
 		}

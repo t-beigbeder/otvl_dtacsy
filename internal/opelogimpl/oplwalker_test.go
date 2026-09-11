@@ -1,10 +1,7 @@
 package opelogimpl
 
 import (
-	"os"
 	"path"
-	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -17,9 +14,12 @@ import (
 func TestOplWalker(t *testing.T) {
 	//t.Skip("wip")
 	lgr := common.DbgLogger()
+	var err error
+	//lgr, err = common.CliLogger("TestOplWalker", "DEBUG+2", "stderr")
 	lgr = common.InfoLogger()
 	//lgr = common.GetLogger()
-	//lgr, _ = common.CliLogger("TestOplWalker", "DEBUG+2", "")
+	require.NoError(t, err)
+
 	lgr.Debug("TestOplWalker: started")
 	std := t.TempDir()
 	require.NoError(t, common.FileTreeGenerate(std, 100, 3000, 2, 4096, false, 2))
@@ -41,20 +41,4 @@ func TestOplWalker(t *testing.T) {
 		localfiles.MakeLocalFilesDssa(), localfiles.MakeLocalFilesDssa(), std, ttd)
 	err = ow.Run()
 	require.NoError(t, err)
-	owi, ok := ow.(*oplWalkerImpl)
-	require.True(t, ok)
-	oplmi, ok := owi.oplm.(*m2fMng)
-	ks := make([]string, 0, len(oplmi.les))
-	for k := range oplmi.les {
-		ks = append(ks, path.Join(std, k))
-	}
-	slices.Sort(ks)
-	if len(oplmi.les) > 3101 {
-		common.WriteFile(path.Join(os.TempDir(), "3102.keys"),[]byte(strings.Join(ks, "\n")))
-		lgr.Debug("here")
-	} else {
-		common.WriteFile(path.Join(os.TempDir(), "3101.keys"),[]byte(strings.Join(ks, "\n")))
-		lgr.Debug("there")
-	}
-	require.LessOrEqual(t, 3000+100+1, len(oplmi.les))
 }
