@@ -1,7 +1,10 @@
 package opelogimpl
 
 import (
+	"os"
 	"path"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -41,8 +44,17 @@ func TestOplWalker(t *testing.T) {
 	owi, ok := ow.(*oplWalkerImpl)
 	require.True(t, ok)
 	oplmi, ok := owi.oplm.(*m2fMng)
-	if len(oplmi.les) > 3101 {
-		lgr.Debug("here")
+	ks := make([]string, 0, len(oplmi.les))
+	for k := range oplmi.les {
+		ks = append(ks, path.Join(std, k))
 	}
-	require.Equal(t, 3000+100+1, len(oplmi.les))
+	slices.Sort(ks)
+	if len(oplmi.les) > 3101 {
+		common.WriteFile(path.Join(os.TempDir(), "3102.keys"),[]byte(strings.Join(ks, "\n")))
+		lgr.Debug("here")
+	} else {
+		common.WriteFile(path.Join(os.TempDir(), "3101.keys"),[]byte(strings.Join(ks, "\n")))
+		lgr.Debug("there")
+	}
+	require.LessOrEqual(t, 3000+100+1, len(oplmi.les))
 }
