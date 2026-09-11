@@ -192,6 +192,7 @@ type LogicalEntry struct {
 	SourceEvents  []*Event
 	SourceVerif   *Verification
 	TargetStates  []*StoredEntry
+	DepCount      int32
 	DirupState    *StoredEntry
 	DirupChildren []string
 	TargetEvents  []*Event

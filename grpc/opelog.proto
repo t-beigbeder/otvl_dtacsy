@@ -87,6 +87,7 @@ message LogicalEntry {
     repeated Event source_events = 2;
     Verification source_verif = 3;
     repeated StoredEntry target_states = 4;
+    int32 dep_count = 10;
     StoredEntry dirup_state = 5;
     repeated string dirup_children = 6;
     repeated Event target_events = 7;

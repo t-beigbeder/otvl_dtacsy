@@ -2,6 +2,7 @@ package opelogimpl
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"path"
 	"slices"
@@ -21,8 +22,6 @@ type oplLogicalEntry struct {
 	le         *opelog.LogicalEntry
 	sChildrenQ []string
 	tChildrenQ []string
-	sParentQ   bool
-	tParentQ   bool
 }
 
 func (ole *oplLogicalEntry) lgr() *slog.Logger {
@@ -35,17 +34,6 @@ func (ole *oplLogicalEntry) source() *oplStoredEntry {
 
 func (ole *oplLogicalEntry) target() *oplStoredEntry {
 	return &oplStoredEntry{oplLogicalEntry: ole, isTarget: true}
-}
-
-func (ole *oplLogicalEntry) load() error {
-	ole.lgr().Debug("load: start")
-	if err := ole.source().load(); err != nil {
-		return err
-	}
-	if err := ole.target().load(); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (ole *oplLogicalEntry) queueChildren() error {
@@ -62,20 +50,46 @@ func (ole *oplLogicalEntry) queueChildren() error {
 			return err
 		}
 	}
+	ole.le.DepCount = int32(len(merged))
 	return nil
 }
 
-func (ole *oplLogicalEntry) queueParent() error {
-	var err error
-	if ole.sParentQ || ole.tParentQ {
-		err = ole.owi.oplq.Put(common.ParentPath(ole.relPath))
-		ole.sParentQ, ole.tParentQ = false, false
+func (ole *oplLogicalEntry) computeNext() error {
+	if !ole.source().isDone() || !ole.target().isDone() || ole.le.DepCount != 0 {
+		return nil
 	}
+	if ole.relPath == "" {
+		return ole.owi.oplq.Close()
+	}
+	prp := common.ParentPath(ole.relPath)
+	ple, err := ole.owi.oplm.GetLogicalEntry(prp)
 	if err != nil {
-		ole.owi.owErr(ole.lgr(), "oplq.Put error", err)
-
+		return err
 	}
-	return err
+	if ple.DepCount == 0 {
+		return fmt.Errorf("parent %s for entry %s dependency count is nul", prp, ole.relPath)
+	}
+	ple.DepCount--
+	if err = ole.owi.oplm.PutLogicalEntry(prp, ple); err != nil {
+		return err
+	}
+	if ple.DepCount == 0 {
+		if err = ole.owi.oplq.Put(prp); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (ole *oplLogicalEntry) load() error {
+	ole.lgr().Debug("load: start")
+	if err := ole.source().load(); err != nil {
+		return err
+	}
+	if err := ole.target().load(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (ole *oplLogicalEntry) process() error {
@@ -96,14 +110,20 @@ func (ole *oplLogicalEntry) process() error {
 		if err != nil {
 			break
 		}
-		if err = ole.queueChildren(); err != nil {
-			break
-		}
-		if err = ole.queueParent(); err != nil {
-			break
-		}
 	}
-	ole.lgr().Debug("process: stop")
+	if err != nil {
+		return err
+	}
+	if err = ole.queueChildren(); err != nil {
+		return err
+	}
+	if err = ole.computeNext(); err != nil {
+		return err
+	}
+	// ole.queueParent()
+	// err = ole.owi.oplq.Put(common.ParentPath(ole.relPath)
+	// ole.owi.owErr(ole.lgr(), "oplq.Put error", err)
+
 	return err
 }
 
@@ -145,7 +165,7 @@ func (ose *oplStoredEntry) events() (evs *[]*opelog.Event) {
 	return
 }
 
-func (ose *oplStoredEntry) existenceEv() (ev *opelog.Event) {
+func (ose *oplStoredEntry) existOrAbsEv() (ev *opelog.Event) {
 	evs := ose.events()
 	for i := len(*evs) - 1; i >= 0; i-- {
 		if (*evs)[i].Kind == opelog.EVT_ABS || (*evs)[i].Kind == opelog.EVT_EXIST {
@@ -202,12 +222,12 @@ func (ose *oplStoredEntry) newEvent(kind opelog.EventCode, origin opelog.OriginC
 	ose.hasChanges = true
 }
 
-func (ose *oplStoredEntry) queueChild(child string) error {
-	if err := ose.owi.oplq.Put(path.Join(ose.relPath, child)); err != nil {
-		ose.owi.owErr(ose.lgr(), "oplq.Put error", err)
-		return err
+func (ose *oplStoredEntry) isDone() bool {
+	eev := ose.existOrAbsEv()
+	if eev == nil || eev.Error != "" {
+		return false
 	}
-	return nil
+	return true
 }
 
 func (ose *oplStoredEntry) setChildrenQ(children []string) {
@@ -218,16 +238,8 @@ func (ose *oplStoredEntry) setChildrenQ(children []string) {
 	}
 }
 
-func (ose *oplStoredEntry) setParentQ() {
-	if ose.isTarget {
-		ose.tParentQ = true
-	} else {
-		ose.sParentQ = true
-	}
-}
-
 func (ose *oplStoredEntry) load() error {
-	eev := ose.existenceEv()
+	eev := ose.existOrAbsEv()
 	if eev != nil && eev.Error == "" {
 		return nil
 	}
@@ -264,9 +276,8 @@ func (ose *oplStoredEntry) load() error {
 			children = slices.Concat(children, fCn)
 			ose.setChildrenQ(children)
 		}
-	} else {
-		ose.setParentQ()
 	}
+
 	se := opelog.FromDataEntry(de, children)
 	se.IsPresent = true
 	ose.newState(se)

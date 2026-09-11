@@ -666,6 +666,7 @@ type LogicalEntry struct {
 	SourceEvents  []*Event         `protobuf:"bytes,2,rep,name=source_events,json=sourceEvents,proto3" json:"source_events,omitempty"`
 	SourceVerif   *Verification    `protobuf:"bytes,3,opt,name=source_verif,json=sourceVerif,proto3" json:"source_verif,omitempty"`
 	TargetStates  []*StoredEntry   `protobuf:"bytes,4,rep,name=target_states,json=targetStates,proto3" json:"target_states,omitempty"`
+	DepCount      int32            `protobuf:"varint,10,opt,name=dep_count,json=depCount,proto3" json:"dep_count,omitempty"`
 	DirupState    *StoredEntry     `protobuf:"bytes,5,opt,name=dirup_state,json=dirupState,proto3" json:"dirup_state,omitempty"`
 	DirupChildren []string         `protobuf:"bytes,6,rep,name=dirup_children,json=dirupChildren,proto3" json:"dirup_children,omitempty"`
 	TargetEvents  []*Event         `protobuf:"bytes,7,rep,name=target_events,json=targetEvents,proto3" json:"target_events,omitempty"`
@@ -731,6 +732,13 @@ func (x *LogicalEntry) GetTargetStates() []*StoredEntry {
 		return x.TargetStates
 	}
 	return nil
+}
+
+func (x *LogicalEntry) GetDepCount() int32 {
+	if x != nil {
+		return x.DepCount
+	}
+	return 0
 }
 
 func (x *LogicalEntry) GetDirupState() *StoredEntry {
@@ -886,12 +894,14 @@ const file_grpc_opelog_proto_rawDesc = "" +
 	"\x06remove\x18\a \x01(\v2\x0f.opelog.AggInfoR\x06remove\x12.\n" +
 	"\n" +
 	"mod_change\x18\b \x01(\v2\x0f.opelog.AggInfoR\tmodChange\x12%\n" +
-	"\x05error\x18\t \x01(\v2\x0f.opelog.AggInfoR\x05error\"\xef\x03\n" +
+	"\x05error\x18\t \x01(\v2\x0f.opelog.AggInfoR\x05error\"\x8c\x04\n" +
 	"\fLogicalEntry\x128\n" +
 	"\rsource_states\x18\x01 \x03(\v2\x13.opelog.StoredEntryR\fsourceStates\x122\n" +
 	"\rsource_events\x18\x02 \x03(\v2\r.opelog.EventR\fsourceEvents\x127\n" +
 	"\fsource_verif\x18\x03 \x01(\v2\x14.opelog.VerificationR\vsourceVerif\x128\n" +
-	"\rtarget_states\x18\x04 \x03(\v2\x13.opelog.StoredEntryR\ftargetStates\x124\n" +
+	"\rtarget_states\x18\x04 \x03(\v2\x13.opelog.StoredEntryR\ftargetStates\x12\x1b\n" +
+	"\tdep_count\x18\n" +
+	" \x01(\x05R\bdepCount\x124\n" +
 	"\vdirup_state\x18\x05 \x01(\v2\x13.opelog.StoredEntryR\n" +
 	"dirupState\x12%\n" +
 	"\x0edirup_children\x18\x06 \x03(\tR\rdirupChildren\x122\n" +
